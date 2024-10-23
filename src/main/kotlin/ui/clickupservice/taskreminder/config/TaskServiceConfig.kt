@@ -22,7 +22,7 @@ class TaskServiceConfig {
 
         val objectMapper = jacksonObjectMapper()
         objectMapper.registerModule(JavaTimeModule())
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
         return objectMapper
     }
