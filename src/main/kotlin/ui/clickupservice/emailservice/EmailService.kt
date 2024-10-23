@@ -7,19 +7,47 @@ import com.sendgrid.SendGrid
 import com.sendgrid.helpers.mail.Mail
 import com.sendgrid.helpers.mail.objects.Content
 import com.sendgrid.helpers.mail.objects.Email
+import com.sendgrid.helpers.mail.objects.Personalization
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.config.ConfigProperties
 
+/**
+ * Reference for SendGrid dynamic template: https://stackoverflow.com/questions/53860093/showing-command-line-output-on-a-html-page/53860562
+ */
 @Service
 class EmailService(val configProperties: ConfigProperties) {
 
-    fun sendEmailToGroup(subject: String, contentStr: String): Response {
+    fun sendPlainEmail(subject: String, contentStr: String): Response {
 
         val from = Email("joelin@rabybayharbour.com")
         val to = Email("joelin@rabybayharbour.com")
         val content = Content("text/plain", contentStr)
         val mail = Mail(from, subject, to, content)
 
+        return sendEmail(mail)
+    }
+
+    fun sendDynamicEmail(subject: String, contentStr: String): Response {
+
+        val from = Email("joelin@rabybayharbour.com")
+        val to = Email("joelin@rabybayharbour.com")
+        val mail = Mail()
+        mail.from = from
+        mail.subject = subject
+        mail.setTemplateId("d-6313f48d216b41f49b3cc4e5b45e2df5")
+
+        val personalization = (Personalization())
+        personalization.addTo(to)
+        personalization.addDynamicTemplateData("subject", subject)
+        personalization.addDynamicTemplateData("content", contentStr)
+        mail.addPersonalization(personalization)
+
+        val response: Response = sendEmail(mail)
+
+        return response
+    }
+
+    private fun sendEmail(mail: Mail): Response {
         val sg = SendGrid(configProperties.sendgridApiKey)
 
         val request = Request()
@@ -31,7 +59,6 @@ class EmailService(val configProperties: ConfigProperties) {
         println(response.statusCode)
         println(response.body)
         println(response.headers)
-
         return response
     }
 }

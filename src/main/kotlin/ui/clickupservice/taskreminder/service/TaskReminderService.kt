@@ -23,7 +23,7 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
         val content = buildString {
             var paddingLength: Int
 
-            appendLine("Payment Report")
+            appendLine("Upcoming Payments Summary")
             appendLine()
             appendLine("Please see the following upcoming payments grouped by status:")
             appendLine()
@@ -39,8 +39,7 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
                 it.value.forEach { t ->
                     val tags = t.tags.joinToString { it.name }
 
-                    appendLine(t.name)
-                    append("\t ($tags)").append(" due on ${df.format(t.dueDate)}").appendLine()
+                    append(t.name.padEnd(45)).append("($tags)".padEnd(20)).append(" due on ${df.format(t.dueDate)}").appendLine()
                 }
 
                 appendLine()
@@ -49,6 +48,6 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
 
         println(content)
 
-        emailService.sendEmailToGroup("Upcoming Payments: ${tasksGroupedByStatus.flatMap { it.value }.size}", content)
+        emailService.sendDynamicEmail("Upcoming Payments: ${tasksGroupedByStatus.flatMap { it.value }.size} in Total", content)
     }
 }

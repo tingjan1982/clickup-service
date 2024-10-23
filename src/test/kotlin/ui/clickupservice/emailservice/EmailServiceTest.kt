@@ -10,9 +10,9 @@ import org.springframework.core.env.Environment
 class EmailServiceTest(@Autowired val emailService: EmailService, @Autowired val environment: Environment) {
 
     @Test
-    fun test() {
+    fun sendPlainEmail() {
 
-        emailService.sendEmailToGroup("Sendgrid Test", "Sendgrid email success").let {
+        emailService.sendPlainEmail("Sendgrid Test", "Sendgrid email success").let {
             assertEquals(202, it.statusCode)
         }
     }

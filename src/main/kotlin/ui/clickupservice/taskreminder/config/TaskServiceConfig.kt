@@ -7,9 +7,14 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableScheduling
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.web.SecurityFilterChain
+
 
 @Configuration
 @EnableScheduling
+@EnableWebSecurity
 class TaskServiceConfig {
 
     @Bean
@@ -20,5 +25,13 @@ class TaskServiceConfig {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         return objectMapper
+    }
+
+    @Bean
+    fun filterChain(http: HttpSecurity): SecurityFilterChain {
+
+        return http.authorizeHttpRequests { auth ->
+            auth.anyRequest().permitAll()
+        }.build()
     }
 }

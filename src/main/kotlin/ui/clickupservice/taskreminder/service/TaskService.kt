@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.config.ConfigProperties
+import ui.clickupservice.taskreminder.config.TaskConfigProperties
 import ui.clickupservice.taskreminder.data.Tasks
 import java.net.URI
 import java.net.URLEncoder
@@ -17,12 +18,20 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.stream.Collectors
 
-
+/**
+ * Pretty print JSON reference: https://www.baeldung.com/java-json-pretty-print
+ */
 @Service
 class TaskService(
     val objectMapper: ObjectMapper,
-    val requestHelper: RequestHelper
+    val requestHelper: RequestHelper,
+    val taskConfigProperties: TaskConfigProperties
 ) {
+
+    companion object {
+        const val PAYMENT_SCHEDULE_LIST_ID = "900303019042"
+    }
+
 
     fun getUpcomingAndOverdueTasks(): List<Tasks.Task> {
 
@@ -30,8 +39,7 @@ class TaskService(
         params["archived"] = "false"
         params["order_by"] = "due_date"
         params["reverse"] = "true"
-        val listId = "900303019042"
-        val request = requestHelper.request("api/v2/list/$listId/task", params)
+        val request = requestHelper.request("api/v2/list/$PAYMENT_SCHEDULE_LIST_ID/task", params)
 
         val httpClient = HttpClient.newBuilder().build()
         httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
@@ -43,16 +51,10 @@ class TaskService(
                 val dueDate = LocalDate.ofInstant(it.dueDate.toInstant(), ZoneId.systemDefault())
                 val days = ChronoUnit.DAYS.between(today, dueDate)
 
-                if (days <= 7) {
-                    println("${it.name} of ${it.tags} is due in $days days")
-                }
-
-                return@filter days <= 7
+                return@filter days <= taskConfigProperties.upcomingTasksDays
             }
 
             return overdueTasks
-//            val prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(tasks)
-//            println(prettyJson)
         }
 
     }
