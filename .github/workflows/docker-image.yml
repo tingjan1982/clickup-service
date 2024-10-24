@@ -27,11 +27,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: Build with Gradle
         run: ./gradlew bootJar
+      - name: Copy Jar file
+        run: mv build/libs/$(ls build/libs) app.jar
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Package
-          path: build/libs
+          name: jar-file
+          path: app.jar
 
   push_to_registry:
     needs: build
@@ -57,7 +59,11 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: joelin/clickup-service
-
+      
+      - uses: actions/download-artifact@v4
+        with:
+          name: jar-file
+          path: app.jar
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
@@ -67,6 +73,7 @@ jobs:
           file: ./Dockerfile
           push: true
           platforms: linux/arm64
+          build-args: JAR_FILE=app.jar
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
