@@ -19,8 +19,8 @@ class EmailService(val configProperties: ConfigProperties) {
 
     fun sendPlainEmail(subject: String, contentStr: String): Response {
 
-        val from = Email("joelin@rabybayharbour.com")
-        val to = Email("joelin@rabybayharbour.com")
+        val from = getFromEmail()
+        val to = Email(configProperties.notificationEmail)
         val content = Content("text/plain", contentStr)
         val mail = Mail(from, subject, to, content)
 
@@ -29,8 +29,8 @@ class EmailService(val configProperties: ConfigProperties) {
 
     fun sendDynamicEmail(subject: String, contentStr: String): Response {
 
-        val from = Email("joelin@rabybayharbour.com")
-        val to = Email("joelin@rabybayharbour.com")
+        val from = getFromEmail()
+        val to = Email(configProperties.notificationEmail)
         val mail = Mail()
         mail.from = from
         mail.subject = subject
@@ -45,6 +45,12 @@ class EmailService(val configProperties: ConfigProperties) {
         val response: Response = sendEmail(mail)
 
         return response
+    }
+
+    private fun getFromEmail(): Email {
+        val from = Email("joelin@rabybayharbour.com")
+        from.name = "Joe's Reminder"
+        return from
     }
 
     private fun sendEmail(mail: Mail): Response {

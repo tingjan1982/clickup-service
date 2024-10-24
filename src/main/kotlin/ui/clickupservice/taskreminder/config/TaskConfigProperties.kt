@@ -8,5 +8,4 @@ import org.springframework.context.annotation.Configuration
 class TaskConfigProperties {
 
     var upcomingTasksDays: Int = 0
-
 }

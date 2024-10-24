@@ -13,7 +13,7 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
     /**
      * buildString usage: https://dev.to/pfilaretov42/nice-way-to-build-string-in-kotlin-nm4
      */
-    @Scheduled(cron = "0 0 10 * * TUE")
+    @Scheduled(cron = "0 0 9 * * TUE")
     fun sendTaskReminder() {
 
         val tasksGroupedByStatus = taskService.getUpcomingAndOverdueTasks().groupBy {
