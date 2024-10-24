@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: ClickUp Service Workflow
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: 21
-          cache: 'gradle'      
+          cache: 'gradle'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build with Gradle
@@ -63,7 +63,7 @@ jobs:
           path: build/libs
       - name: Build and push Docker image
         id: push
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        uses: docker/build-push-action@v6
         
         with:
           context: .
@@ -75,17 +75,7 @@ jobs:
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
-        with:
-          #subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+        with:          
           subject-name: docker.io/joelin/clickup-service
           subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-          
-  # buildImage:
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   - name: Build the Docker image
-  #     run: docker build . --build-arg JAR_FILE=build/libs/clickup-service-0.0.1-SNAPSHOT.jar --tag joelin/clickup-service:latest
-      
+          push-to-registry: true      
