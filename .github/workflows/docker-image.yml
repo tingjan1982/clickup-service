@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-source:
     runs-on: ubuntu-latest
     
     steps:
@@ -19,10 +19,7 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: 21
-          cache: 'gradle'
-          # cache-dependency-path: | # optional
-          #   sub-project/*.gradle*
-          #   sub-project/**/gradle-wrapper.properties
+          cache: 'gradle'      
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build with Gradle
@@ -33,8 +30,8 @@ jobs:
           name: app-jar
           path: build/libs
 
-  push_to_registry:
-    needs: build
+  docker-publish:
+    needs: build-source
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     permissions:
@@ -42,9 +39,10 @@ jobs:
       contents: read
       attestations: write
       id-token: write
+      
     steps:
-      - name: Check out the repo
-        uses: actions/checkout@v4
+      # - name: Check out the repo
+      #   uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
@@ -77,8 +75,8 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
-          #subject-name: clickup-service
+          #subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-name: docker.io/joelin/clickup-service:main
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
           
