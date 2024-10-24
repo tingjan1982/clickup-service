@@ -41,8 +41,8 @@ jobs:
       id-token: write
       
     steps:
-      # - name: Check out the repo
-      #   uses: actions/checkout@v4
+      - name: Check out the repo (Dockerfile)
+        uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
@@ -76,7 +76,7 @@ jobs:
         uses: actions/attest-build-provenance@v1
         with:
           #subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
-          subject-name: docker.io/joelin/clickup-service:main
+          subject-name: docker.io/joelin/clickup-service
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
           
