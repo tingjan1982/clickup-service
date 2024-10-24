@@ -2,7 +2,8 @@ FROM amazoncorretto:23-alpine-jdk
 LABEL authors="Joe Lin"
 EXPOSE 8080
 
-ARG JAR_FILE
-COPY ${JAR_FILE} /app.jar
+#WORKDIR /app
+#ARG JAR_FILE
+COPY build/libs/clickup-service-0.0.1-SNAPSHOT.jar /app.jar
 
 ENTRYPOINT ["sh", "-c", "java -jar /app.jar"]
