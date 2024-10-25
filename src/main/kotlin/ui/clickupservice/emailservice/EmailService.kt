@@ -10,6 +10,7 @@ import com.sendgrid.helpers.mail.objects.Email
 import com.sendgrid.helpers.mail.objects.Personalization
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.config.ConfigProperties
+import ui.clickupservice.shared.exception.BusinessException
 
 /**
  * Reference for SendGrid dynamic template: https://stackoverflow.com/questions/53860093/showing-command-line-output-on-a-html-page/53860562
@@ -38,7 +39,7 @@ class EmailService(val configProperties: ConfigProperties) {
 
         val personalization = (Personalization())
         personalization.addTo(to)
-        personalization.addDynamicTemplateData("subject", subject)
+        personalization.addDynamicTemplateData("subject", "[Automated] $subject")
         personalization.addDynamicTemplateData("content", contentStr)
         mail.addPersonalization(personalization)
 
@@ -62,6 +63,11 @@ class EmailService(val configProperties: ConfigProperties) {
         request.body = mail.build()
 
         val response: Response = sg.api(request)
+
+        if (response.statusCode != 202) {
+            throw BusinessException("Sending email notification failed: ${response.body}")
+        }
+
         println(response.statusCode)
         println(response.body)
         println(response.headers)

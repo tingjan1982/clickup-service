@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.config.ConfigProperties
+import ui.clickupservice.shared.exception.BusinessException
 import ui.clickupservice.taskreminder.config.TaskConfigProperties
 import ui.clickupservice.taskreminder.data.Tasks
 import java.net.URI
@@ -44,6 +45,10 @@ class TaskService(
         val httpClient = HttpClient.newBuilder().build()
         httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
 
+            if (it.statusCode() != 200) {
+                throw BusinessException("Problem getting tasks from ClickUp")
+            }
+
             val tasks = objectMapper.readValue<Tasks>(it.body())
             val today = LocalDate.now()
 
@@ -80,4 +85,5 @@ class TaskService(
                 .build()
         }
     }
+
 }

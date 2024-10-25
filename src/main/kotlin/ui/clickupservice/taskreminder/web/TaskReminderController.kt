@@ -10,9 +10,15 @@ import ui.clickupservice.taskreminder.service.TaskReminderService
 class TaskReminderController(val taskReminderService: TaskReminderService) {
 
     @GetMapping("/")
-    fun sendTaskReminder() {
+    fun sendTaskReminder(): String {
 
-        taskReminderService.sendTaskReminder()
+        taskReminderService.sendTaskReminder().let {
+            return """
+            <pre style="font-family: monospace">
+$it
+            </pre>""".trimIndent()
+        }
+
     }
 
 }

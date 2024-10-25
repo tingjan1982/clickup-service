@@ -14,7 +14,7 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
      * buildString usage: https://dev.to/pfilaretov42/nice-way-to-build-string-in-kotlin-nm4
      */
     @Scheduled(cron = "0 0 9 * * TUE")
-    fun sendTaskReminder() {
+    fun sendTaskReminder(): String {
 
         val tasksGroupedByStatus = taskService.getUpcomingAndOverdueTasks().groupBy {
             it.status1
@@ -49,5 +49,6 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
         println(content)
 
         emailService.sendDynamicEmail("Upcoming Payments: ${tasksGroupedByStatus.flatMap { it.value }.size} in Total", content)
+        return content
     }
 }
