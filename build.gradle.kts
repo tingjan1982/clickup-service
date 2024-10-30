@@ -14,6 +14,12 @@ java {
     }
 }
 
+springBoot {
+    buildInfo {
+        version = "${project.version}"
+    }
+}
+
 repositories {
     mavenCentral()
 }

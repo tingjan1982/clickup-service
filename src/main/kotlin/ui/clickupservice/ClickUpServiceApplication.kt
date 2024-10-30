@@ -2,12 +2,15 @@ package ui.clickupservice
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
-import ui.clickupservice.taskreminder.service.TaskService
+import java.util.*
+
 
 @SpringBootApplication
 class ClickUpServiceApplication
 
 
 fun main(args: Array<String>) {
+    TimeZone.setDefault(TimeZone.getTimeZone("Australia/Brisbane"))
+
     runApplication<ClickUpServiceApplication>(*args)
 }

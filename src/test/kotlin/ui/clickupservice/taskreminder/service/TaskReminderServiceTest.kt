@@ -1,6 +1,5 @@
 package ui.clickupservice.taskreminder.service
 
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -12,5 +11,11 @@ class TaskReminderServiceTest(@Autowired val taskReminderService: TaskReminderSe
     fun sendTaskReminder() {
 
         taskReminderService.sendTaskReminder()
+    }
+
+    @Test
+    fun createTaskSummaryContent() {
+
+        println(taskReminderService.createTaskSummaryContent())
     }
 }
