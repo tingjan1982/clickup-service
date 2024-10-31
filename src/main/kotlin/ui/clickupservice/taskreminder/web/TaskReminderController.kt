@@ -9,16 +9,26 @@ import ui.clickupservice.taskreminder.service.TaskReminderService
 @RequestMapping("/task-reminders")
 class TaskReminderController(val taskReminderService: TaskReminderService) {
 
-    @GetMapping("/")
-    fun sendTaskReminder(): String {
+    @GetMapping("/payments")
+    fun sendPaymentReminder(): String {
 
-        taskReminderService.sendTaskReminder().let {
+        taskReminderService.sendPaymentReminder().let {
             return """
             <pre style="font-family: monospace">
 $it
             </pre>""".trimIndent()
         }
+    }
 
+    @GetMapping("/optionPeriod")
+    fun sendOptionPeriodReminder(): String {
+
+        taskReminderService.checkAndSendTenantOptionPeriod().let {
+            return """
+            <pre style="font-family: monospace">
+$it
+            </pre>""".trimIndent()
+        }
     }
 
 }

@@ -28,7 +28,7 @@ class EmailService(val configProperties: ConfigProperties) {
         return sendEmail(mail)
     }
 
-    fun sendDynamicEmail(subject: String, contentStr: String): Response {
+    fun sendDynamicEmail(subject: String, contentStr: String, dynamicData: Map<String, String> = mapOf()): Response {
 
         val from = getFromEmail()
         val to = Email(configProperties.notificationEmail)
@@ -41,6 +41,11 @@ class EmailService(val configProperties: ConfigProperties) {
         personalization.addTo(to)
         personalization.addDynamicTemplateData("subject", "[Automated] $subject")
         personalization.addDynamicTemplateData("content", contentStr)
+
+        dynamicData.forEach {
+            personalization.addDynamicTemplateData(it.key, it.value)
+        }
+
         mail.addPersonalization(personalization)
 
         val response: Response = sendEmail(mail)

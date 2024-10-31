@@ -2,6 +2,7 @@ package ui.clickupservice.taskreminder.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.config.ConfigProperties
@@ -28,9 +29,31 @@ class TaskService(
     val requestHelper: RequestHelper,
     val taskConfigProperties: TaskConfigProperties
 ) {
-
     companion object {
         const val PAYMENT_SCHEDULE_LIST_ID = "900303019042"
+        const val TENANCY_SCHEDULE_LIST_ID = "900302094609"
+    }
+
+    fun getTenancyScheduleTasks(): List<Tasks.Task> {
+        val params = HashMap<String, String>()
+        params["archived"] = "false"
+
+        return getTaskRequest(TENANCY_SCHEDULE_LIST_ID, params).tasks
+    }
+
+    fun updateTaskStatus(task: Tasks.Task, status: String): Tasks.Task {
+
+        val payload = mapOf("status" to status)
+        val request = requestHelper.putRequest("api/v2/task/${task.id}", payload)
+        val httpClient = HttpClient.newBuilder().build()
+        httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
+
+            if (it.statusCode() != 200) {
+                throw BusinessException("Problem updating tasks from ClickUp")
+            }
+
+            return objectMapper.readValue<Tasks.Task>(it.body())
+        }
     }
 
 
@@ -40,7 +63,22 @@ class TaskService(
         params["archived"] = "false"
         params["order_by"] = "due_date"
         params["reverse"] = "true"
-        val request = requestHelper.request("api/v2/list/$PAYMENT_SCHEDULE_LIST_ID/task", params)
+        val tasks = getTaskRequest(PAYMENT_SCHEDULE_LIST_ID, params)
+
+        val today = LocalDate.now()
+
+        val overdueTasks = tasks.tasks.filter {
+            val dueDate = LocalDate.ofInstant(it.dueDate.toInstant(), ZoneId.systemDefault())
+            val days = ChronoUnit.DAYS.between(today, dueDate)
+
+            return@filter days <= taskConfigProperties.upcomingTasksDays
+        }
+
+        return overdueTasks
+    }
+
+    fun getTaskRequest(listId: String, params: Map<String, String>): Tasks {
+        val request = requestHelper.getRequest("api/v2/list/$listId/task", params)
 
         val httpClient = HttpClient.newBuilder().build()
         httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
@@ -49,25 +87,17 @@ class TaskService(
                 throw BusinessException("Problem getting tasks from ClickUp")
             }
 
-            val tasks = objectMapper.readValue<Tasks>(it.body())
-            val today = LocalDate.now()
-
-            val overdueTasks = tasks.tasks.filter {
-                val dueDate = LocalDate.ofInstant(it.dueDate.toInstant(), ZoneId.systemDefault())
-                val days = ChronoUnit.DAYS.between(today, dueDate)
-
-                return@filter days <= taskConfigProperties.upcomingTasksDays
-            }
-
-            return overdueTasks
+            return objectMapper.readValue<Tasks>(it.body())
         }
-
     }
 
     @Component
-    class RequestHelper(private val config: ConfigProperties) {
+    class RequestHelper(
+        private val config: ConfigProperties,
+        @Qualifier("objectMapper") private val objectMapper: ObjectMapper
+    ) {
 
-        fun request(url: String, params: Map<String, String>): HttpRequest? {
+        fun getRequest(url: String, params: Map<String, String>): HttpRequest {
 
             val query = params.keys.stream()
                 .map { key: Any ->
@@ -81,6 +111,18 @@ class TaskService(
             return HttpRequest.newBuilder()
                 .GET()
                 .uri(URI.create("${config.endpoint}/$url?$query"))
+                .header("Authorization", config.authenticationToken)
+                .build()
+        }
+
+        fun putRequest(url: String, requestBody: Map<String, String>): HttpRequest {
+
+            val payload = objectMapper.writeValueAsString(requestBody)
+
+            return HttpRequest.newBuilder()
+                .PUT(HttpRequest.BodyPublishers.ofString(payload))
+                .uri(URI.create("${config.endpoint}/$url"))
+                .header("Content-Type", "application/json")
                 .header("Authorization", config.authenticationToken)
                 .build()
         }
