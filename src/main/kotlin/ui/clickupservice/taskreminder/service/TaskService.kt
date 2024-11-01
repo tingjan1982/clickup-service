@@ -7,8 +7,11 @@ import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.exception.BusinessException
+import ui.clickupservice.shared.extension.toLocalDate
 import ui.clickupservice.taskreminder.config.TaskConfigProperties
 import ui.clickupservice.taskreminder.data.Tasks
+import ui.clickupservice.taskreminder.data.TenantTask
+import java.math.BigDecimal
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient
@@ -16,7 +19,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.stream.Collectors
 
@@ -34,11 +36,15 @@ class TaskService(
         const val TENANCY_SCHEDULE_LIST_ID = "900302094609"
     }
 
-    fun getTenancyScheduleTasks(): List<Tasks.Task> {
+    fun getTenancyScheduleTasks(): List<TenantTask> {
         val params = HashMap<String, String>()
         params["archived"] = "false"
 
-        return getTaskRequest(TENANCY_SCHEDULE_LIST_ID, params).tasks
+        return getTaskRequest(TENANCY_SCHEDULE_LIST_ID, params).tasks.map {
+            val rentField = it.customFields.first { it.name == "Annual Rent" }
+            return@map TenantTask(it, rentField.value ?: BigDecimal.ZERO
+            )
+        }
     }
 
     fun updateTaskStatus(task: Tasks.Task, status: String): Tasks.Task {
@@ -68,8 +74,7 @@ class TaskService(
         val today = LocalDate.now()
 
         val overdueTasks = tasks.tasks.filter {
-            val dueDate = LocalDate.ofInstant(it.dueDate.toInstant(), ZoneId.systemDefault())
-            val days = ChronoUnit.DAYS.between(today, dueDate)
+            val days = ChronoUnit.DAYS.between(today, it.dueDate.toLocalDate())
 
             return@filter days <= taskConfigProperties.upcomingTasksDays
         }

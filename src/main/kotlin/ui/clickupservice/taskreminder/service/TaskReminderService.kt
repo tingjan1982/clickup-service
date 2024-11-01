@@ -5,20 +5,69 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import ui.clickupservice.emailservice.EmailService
+import ui.clickupservice.leasing.service.LeasingService
+import ui.clickupservice.shared.extension.formatNumber
+import ui.clickupservice.shared.extension.toDateFormat
+import ui.clickupservice.shared.extension.toLocalDate
 import ui.clickupservice.taskreminder.data.PaymentTask
 import java.math.BigDecimal
-import java.text.SimpleDateFormat
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.*
 
 @Service
-class TaskReminderService(val taskService: TaskService, val emailService: EmailService) {
+class TaskReminderService(val taskService: TaskService, val leasingService: LeasingService, val emailService: EmailService) {
 
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(TaskReminderService::class.java)
-        val df = SimpleDateFormat("dd/MM/yyyy")
+    }
+
+    fun checkTenantRentView() {
+
+        val tenancies = taskService.getTenancyScheduleTasks().filter {
+            val now = LocalDate.now().month
+            val t = it.task
+
+            if (t.taskStatus == "lease commenced") {
+                val diff = now.compareTo(t.dueDate.toLocalDate().month)
+                return@filter diff == -1
+            }
+
+            return@filter t.taskStatus == "rent review"
+        }.onEach { it ->
+            val t = it.task
+
+            if (t.taskStatus != "rent review") {
+                println("Updating task ${t.name} to RENT REVIEW")
+
+                taskService.updateTaskStatus(t, "rent review").let {
+                    println("Task has successfully been updated - ${it.taskStatus}")
+                }
+            }
+        }
+
+        val content = buildString {
+            appendLine("Tenants Upcoming Rent Review")
+            appendLine()
+            append("${"Tenancy".padEnd(30)} | ${"Due Date".padEnd(12)} | ${"Current Rent".padEnd(12)} | New Rent").appendLine()
+            appendLine("".padEnd(75, '-'))
+
+            tenancies.forEach { t ->
+                val it = t.task
+                val cpiRent = try {
+                    val cpiRent = leasingService.calculateRent(t.rent, t.task.dueDate)
+                    "${cpiRent.first.formatNumber()} (${cpiRent.second})"
+
+                } catch (_: Exception) {
+                    "Waiting for CPI"
+                }
+
+                append(it.name.padEnd(30)).append(" | ").append(it.dueDate.toDateFormat().padEnd(12)).append(" | ")
+                    .append(t.rent.formatNumber().padEnd(12)).append(" | ").append(cpiRent).appendLine()
+            }
+        }
+        println(content)
+
     }
 
     @Scheduled(cron = "0 0 9 1W * TUE")
@@ -26,21 +75,21 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
 
         val today = LocalDate.now()
         val tasks = taskService.getTenancyScheduleTasks().filter {
+            val t = it.task
 
-            if (it.taskStatus == "lease commenced") {
-                val dueDate = LocalDate.ofInstant(it.dueDate.toInstant(), ZoneId.systemDefault())
-                val months = ChronoUnit.MONTHS.between(today, dueDate)
+            if (t.taskStatus == "lease commenced") {
+                val months = ChronoUnit.MONTHS.between(today, t.dueDate.toLocalDate())
 
                 return@filter months <= 6
             }
 
-            return@filter it.taskStatus == "option period"
+            return@filter t.taskStatus == "option period"
         }.onEach { it ->
+            val t = it.task
+            if (t.taskStatus != "option period") {
+                println("Updating task ${t.name} to OPTION PERIOD")
 
-            if (it.taskStatus != "option period") {
-                println("Updating task ${it.name} to OPTION PERIOD")
-
-                taskService.updateTaskStatus(it, "option period").let {
+                taskService.updateTaskStatus(t, "option period").let {
                     println("Task has successfully been updated - ${it.taskStatus}")
                 }
             }
@@ -52,8 +101,10 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
             append("${"Tenancy".padEnd(30)} | ${"Due Date".padEnd(12)} | Entity").appendLine()
             appendLine("".padEnd(70, '-'))
 
-            tasks.forEach { it ->
-                append(it.name.padEnd(30)).append(" | ").append(it.dueDate.toDateFormat().padEnd(12)).append(" | ").append(it.toTagString()).appendLine()
+            tasks.forEach {
+                val t = it.task
+                append(t.name.padEnd(30)).append(" | ").append(t.dueDate.toDateFormat().padEnd(12)).append(" | ").append(t.toTagString())
+                    .appendLine()
             }
 
             appendLine()
@@ -77,7 +128,11 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
         val content = createPaymentSummaryContent(tasksGroupedByStatus)
         println(content)
 
-        emailService.sendDynamicEmail("Upcoming Payments: ${tasksGroupedByStatus.flatMap { it.value }.size} in Total", content, mapOf("listId" to TaskService.PAYMENT_SCHEDULE_LIST_ID))
+        emailService.sendDynamicEmail(
+            "Upcoming Payments: ${tasksGroupedByStatus.flatMap { it.value }.size} in Total",
+            content,
+            mapOf("listId" to TaskService.PAYMENT_SCHEDULE_LIST_ID)
+        )
         return content
     }
 
@@ -126,7 +181,4 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
         return content
     }
 
-    fun Date.toDateFormat(): String {
-        return df.format(this)
-    }
 }
