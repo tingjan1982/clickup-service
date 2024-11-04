@@ -8,15 +8,21 @@ import org.springframework.boot.test.context.SpringBootTest
 class TaskReminderServiceTest(@Autowired val taskReminderService: TaskReminderService) {
 
     @Test
-    fun checkTenantRentReview() {
+    fun updateTenantsInRentReview() {
 
-        taskReminderService.checkTenantRentView()
+        taskReminderService.updateTenantsInRentReview()
     }
 
     @Test
-    fun checkAndSendTenantOptionPeriod() {
+    fun checkTenantRentReview() {
 
-        taskReminderService.checkAndSendTenantOptionPeriod()
+        taskReminderService.sendTenantRentReview()
+    }
+
+    @Test
+    fun sendTenantOptionPeriod() {
+
+        taskReminderService.sendTenantOptionPeriod()
     }
 
     @Test

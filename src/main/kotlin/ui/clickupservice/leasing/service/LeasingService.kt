@@ -1,11 +1,9 @@
 package ui.clickupservice.leasing.service
 
 import org.springframework.stereotype.Service
-import ui.clickupservice.shared.extension.toLocalDate
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.Month
-import java.util.*
 
 @Service
 class LeasingService {
@@ -23,23 +21,21 @@ class LeasingService {
         )
     }
 
-    fun calculateRent(rent: BigDecimal, anniversary: Date): Pair<BigDecimal, Float> {
+    fun calculateRent(rent: BigDecimal, anniversary: LocalDate): Pair<BigDecimal, Float> {
 
         val cpiFigure = getCpiFigure(anniversary)
         return rent.multiply(cpiFigure.toBigDecimal()) to cpiFigure
-
     }
 
-    internal fun getCpiFigure(date: Date): Float {
+    internal fun getCpiFigure(anniversary: LocalDate): Float {
 
-        val anniversary = date.toLocalDate()
-        val currentYear = LocalDate.now().year
+        val year = anniversary.year
 
         val quarter = when (anniversary.month) {
-            Month.JANUARY, Month.FEBRUARY, Month.MARCH -> Pair(currentYear - 1, 4)
-            Month.APRIL, Month.MAY, Month.JUNE -> Pair(currentYear, 1)
-            Month.JULY, Month.AUGUST, Month.SEPTEMBER -> Pair(currentYear, 2)
-            Month.OCTOBER, Month.NOVEMBER, Month.DECEMBER -> Pair(currentYear, 3)
+            Month.JANUARY, Month.FEBRUARY, Month.MARCH -> Pair(year - 1, 4)
+            Month.APRIL, Month.MAY, Month.JUNE -> Pair(year, 1)
+            Month.JULY, Month.AUGUST, Month.SEPTEMBER -> Pair(year, 2)
+            Month.OCTOBER, Month.NOVEMBER, Month.DECEMBER -> Pair(year, 3)
             else -> throw Exception("Include all months in the conditions")
         }
 

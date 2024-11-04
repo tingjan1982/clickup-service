@@ -23,7 +23,7 @@ $it
     @GetMapping("/optionPeriod")
     fun sendOptionPeriodReminder(): String {
 
-        taskReminderService.checkAndSendTenantOptionPeriod().let {
+        taskReminderService.sendTenantOptionPeriod().let {
             return """
             <pre style="font-family: monospace">
 $it
@@ -31,4 +31,14 @@ $it
         }
     }
 
+    @GetMapping("/rentReview")
+    fun sendTenantRentReviewReminder(): String {
+
+        taskReminderService.sendTenantRentReview().let {
+            return """
+            <pre style="font-family: monospace">
+$it
+            </pre>""".trimIndent()
+        }
+    }
 }

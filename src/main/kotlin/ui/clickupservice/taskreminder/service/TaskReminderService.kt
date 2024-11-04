@@ -22,15 +22,38 @@ class TaskReminderService(val taskService: TaskService, val leasingService: Leas
         val LOGGER: Logger = LoggerFactory.getLogger(TaskReminderService::class.java)
     }
 
-    fun checkTenantRentView() {
+    @Scheduled(cron = "0 0 0 1 * *")
+    fun updateTenantsInRentReview() {
+        val now = LocalDate.now().month
 
-        val tenancies = taskService.getTenancyScheduleTasks().filter {
-            val now = LocalDate.now().month
+        taskService.getTenancyScheduleTasks().filter {
+            return@filter it.task.taskStatus == "rent review"
+        }.forEach { it ->
+            val diff = now.compareTo(it.task.dueDate.toLocalDate().month)
+
+            if (diff == 0) {
+                println("New rent in effect for ${it.task.name}, change status")
+                taskService.updateTaskStatus(it.task, "lease commenced").also {
+                    println("Task has successfully been updated - ${it.taskStatus}")
+                }
+
+                taskService.updateCustomField(it.task, "Annual Rent",  it.newRent.formatNumber())
+                taskService.updateCustomField(it.task, "New Rent", "")
+            }
+        }
+    }
+
+    @Scheduled(cron = "0 0 8 L * *")
+    fun sendTenantRentReview(): String {
+        val now = LocalDate.now()
+
+        val tenancies = taskService.getTenancyScheduleTasks().filter { it ->
             val t = it.task
 
-            if (t.taskStatus == "lease commenced") {
-                val diff = now.compareTo(t.dueDate.toLocalDate().month)
-                return@filter diff == -1
+            if (t.taskStatus == "lease commenced" && it.reviewType.needReview) {
+                val diff = ChronoUnit.MONTHS.between(LocalDate.now().withDayOfMonth(1), it.anniversaryDate)
+                println("${t.name} $diff")
+                return@filter diff.toInt() <= 3
             }
 
             return@filter t.taskStatus == "rent review"
@@ -40,38 +63,48 @@ class TaskReminderService(val taskService: TaskService, val leasingService: Leas
             if (t.taskStatus != "rent review") {
                 println("Updating task ${t.name} to RENT REVIEW")
 
-                taskService.updateTaskStatus(t, "rent review").let {
-                    println("Task has successfully been updated - ${it.taskStatus}")
-                }
+//                taskService.updateTaskStatus(t, "rent review").also {
+//                    println("Task has successfully been updated - ${it.taskStatus}")
+//                }
             }
         }
 
         val content = buildString {
-            appendLine("Tenants Upcoming Rent Review")
+            appendLine("Tenants Upcoming Rent Review (All figures are GST exclusive)")
             appendLine()
-            append("${"Tenancy".padEnd(30)} | ${"Due Date".padEnd(12)} | ${"Current Rent".padEnd(12)} | New Rent").appendLine()
-            appendLine("".padEnd(75, '-'))
+            append("${"Tenancy".padEnd(30)} | ${"Anniversary".padEnd(12)} | ${"Current Rent".padEnd(15)} | ${"New Rent (CPI)".padEnd(15)} | New Monthly Rent").appendLine()
+            appendLine("".padEnd(100, '-'))
 
             tenancies.forEach { t ->
                 val it = t.task
-                val cpiRent = try {
-                    val cpiRent = leasingService.calculateRent(t.rent, t.task.dueDate)
-                    "${cpiRent.first.formatNumber()} (${cpiRent.second})"
+                var newRent = ""
 
-                } catch (_: Exception) {
+                val cpiRent = try {
+                    val cpiRent = leasingService.calculateRent(t.rent, t.anniversaryDate)
+                    taskService.updateCustomField(it, "New Rent", cpiRent.first.formatNumber())
+
+                    "${cpiRent.first.formatNumber()} (${cpiRent.second})".also {
+                        newRent = (cpiRent.first / BigDecimal(12) - t.monthlyIncentive).formatNumber() // .divide(BigDecimal(12)).minus(t.monthlyIncentive).formatNumber()
+                    }
+                } catch (e: Exception) {
+                    println(e)
                     "Waiting for CPI"
                 }
 
-                append(it.name.padEnd(30)).append(" | ").append(it.dueDate.toDateFormat().padEnd(12)).append(" | ")
-                    .append(t.rent.formatNumber().padEnd(12)).append(" | ").append(cpiRent).appendLine()
+                append(it.name.padEnd(30)).append(" | ").append(t.anniversaryDate.toString().padEnd(12)).append(" | ")
+                    .append(t.rent.formatNumber().padEnd(15)).append(" | ")
+                    .append(cpiRent.padEnd(15)).append((" | "))
+                    .append(newRent.padEnd(20))
+                    .appendLine()
             }
         }
         println(content)
-
+        emailService.sendDynamicEmail("Tenant Rent Review", content, mapOf("listId" to TaskService.TENANCY_SCHEDULE_LIST_ID))
+        return content
     }
 
     @Scheduled(cron = "0 0 9 1W * TUE")
-    fun checkAndSendTenantOptionPeriod(): String {
+    fun sendTenantOptionPeriod(): String {
 
         val today = LocalDate.now()
         val tasks = taskService.getTenancyScheduleTasks().filter {
@@ -140,15 +173,15 @@ class TaskReminderService(val taskService: TaskService, val leasingService: Leas
         .filter {
             it.taskStatus != "payment plan"
         }.map { it ->
-            val paymentField = it.customFields.first { it.name == "Payment" }
-            return@map PaymentTask(it, paymentField.value ?: BigDecimal.ZERO)
+            val paymentField = it.customFields.first { it.name == "Payment" }.toBigDecimal()
+            return@map PaymentTask(it, paymentField)
 
         }
         .groupBy {
             it.task.taskStatus
         }
 
-    fun createPaymentSummaryContent(tasksGroupedByStatus: Map<String?, List<PaymentTask>> = getScheduledOrTodoTasks()): String {
+    internal fun createPaymentSummaryContent(tasksGroupedByStatus: Map<String?, List<PaymentTask>> = getScheduledOrTodoTasks()): String {
         val content = buildString {
             var paddingLength: Int
 

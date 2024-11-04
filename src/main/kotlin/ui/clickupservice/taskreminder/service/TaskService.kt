@@ -11,7 +11,6 @@ import ui.clickupservice.shared.extension.toLocalDate
 import ui.clickupservice.taskreminder.config.TaskConfigProperties
 import ui.clickupservice.taskreminder.data.Tasks
 import ui.clickupservice.taskreminder.data.TenantTask
-import java.math.BigDecimal
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient
@@ -39,11 +38,20 @@ class TaskService(
     fun getTenancyScheduleTasks(): List<TenantTask> {
         val params = HashMap<String, String>()
         params["archived"] = "false"
+        val now = LocalDate.now()
 
-        return getTaskRequest(TENANCY_SCHEDULE_LIST_ID, params).tasks.map {
-            val rentField = it.customFields.first { it.name == "Annual Rent" }
-            return@map TenantTask(it, rentField.value ?: BigDecimal.ZERO
-            )
+        return getTaskRequest(TENANCY_SCHEDULE_LIST_ID, params).tasks.map { it ->
+            val rentField = it.customFields.first { it.name == "Annual Rent" }.toBigDecimal()
+            val newRentField = it.customFields.first { it.name == "New Rent" }.toBigDecimal()
+            val monthlyIncentiveField = it.customFields.first { it.name == "Monthly Incentive" }.toBigDecimal()
+            val reviewType = it.customFields.first { it.name == "Review Type" }.toEnumType<TenantTask.ReviewType>(TenantTask.ReviewType.NA)
+
+            val anniversary = it.startDate.toLocalDate().let {
+                val year = if (it.month < now.month) now.year + 1 else now.year
+
+                return@let LocalDate.of(year, it.month, it.dayOfMonth)
+            }
+            return@map TenantTask(it, rentField, newRentField, monthlyIncentiveField, reviewType, anniversary)
         }
     }
 
@@ -55,10 +63,26 @@ class TaskService(
         httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
 
             if (it.statusCode() != 200) {
-                throw BusinessException("Problem updating tasks from ClickUp")
+                throw BusinessException("Problem updating tasks in ClickUp")
             }
 
             return objectMapper.readValue<Tasks.Task>(it.body())
+        }
+    }
+
+    fun updateCustomField(task: Tasks.Task, fieldName: String, value: String): String {
+
+        val fieldId = task.customFields.first { it.name == fieldName }.id
+        val payload = mapOf("value" to value)
+        val request = requestHelper.postRequest("api/v2/task/${task.id}/field/${fieldId}", payload)
+        val httpClient = HttpClient.newBuilder().build()
+        httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
+
+            if (it.statusCode() != 200) {
+                throw BusinessException("Problem updating custom field in ClickUp")
+            }
+
+            return "success"
         }
     }
 
@@ -124,8 +148,23 @@ class TaskService(
 
             val payload = objectMapper.writeValueAsString(requestBody)
 
-            return HttpRequest.newBuilder()
-                .PUT(HttpRequest.BodyPublishers.ofString(payload))
+            HttpRequest.newBuilder().PUT(HttpRequest.BodyPublishers.ofString(payload)).let {
+                return buildRequest(it, url)
+            }
+        }
+
+        fun postRequest(url: String, requestBody: Map<String, String>): HttpRequest {
+
+            val payload = objectMapper.writeValueAsString(requestBody)
+
+            HttpRequest.newBuilder().POST(HttpRequest.BodyPublishers.ofString(payload)).let {
+                return buildRequest(it, url)
+            }
+        }
+
+        fun buildRequest(builder: HttpRequest.Builder, url: String): HttpRequest {
+
+            return builder
                 .uri(URI.create("${config.endpoint}/$url"))
                 .header("Content-Type", "application/json")
                 .header("Authorization", config.authenticationToken)
