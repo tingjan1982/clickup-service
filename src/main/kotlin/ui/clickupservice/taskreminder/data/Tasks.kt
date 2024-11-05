@@ -45,6 +45,9 @@ data class Tasks(var tasks: List<Task>) {
                 return if (value != null) BigDecimal(value) else BigDecimal.ZERO
             }
 
+            /**
+             * https://www.baeldung.com/kotlin/convert-string-enum
+             */
             @OptIn(ExperimentalStdlibApi::class)
             inline fun <reified E : Enum<E>> toEnumType(defaultValue: E): E {
 

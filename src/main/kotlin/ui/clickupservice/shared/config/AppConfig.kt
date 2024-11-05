@@ -1,4 +1,4 @@
-package ui.clickupservice.taskreminder.config
+package ui.clickupservice.shared.config
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jakarta.annotation.PostConstruct
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.EnableAspectJAutoProxy
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -17,6 +18,7 @@ import java.util.*
 @Configuration
 @EnableScheduling
 @EnableWebSecurity
+@EnableAspectJAutoProxy
 class TaskServiceConfig {
 
     @Bean

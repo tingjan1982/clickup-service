@@ -4,10 +4,11 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import ui.clickupservice.taskreminder.service.TaskReminderService
+import ui.clickupservice.taskreminder.service.TenantService
 
 @RestController
-@RequestMapping("/task-reminders")
-class TaskReminderController(val taskReminderService: TaskReminderService) {
+@RequestMapping("/services")
+class TaskReminderController(val taskReminderService: TaskReminderService, val tenantService: TenantService) {
 
     @GetMapping("/payments")
     fun sendPaymentReminder(): String {
@@ -34,7 +35,7 @@ $it
     @GetMapping("/rentReview")
     fun sendTenantRentReviewReminder(): String {
 
-        taskReminderService.sendTenantRentReview().let {
+        tenantService.sendTenantRentReview().let {
             return """
             <pre style="font-family: monospace">
 $it

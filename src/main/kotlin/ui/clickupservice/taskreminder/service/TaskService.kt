@@ -47,10 +47,9 @@ class TaskService(
             val reviewType = it.customFields.first { it.name == "Review Type" }.toEnumType<TenantTask.ReviewType>(TenantTask.ReviewType.NA)
 
             val anniversary = it.startDate.toLocalDate().let {
-                val year = if (it.month < now.month) now.year + 1 else now.year
-
-                return@let LocalDate.of(year, it.month, it.dayOfMonth)
+                return@let LocalDate.of(now.year, it.month, it.dayOfMonth)
             }
+
             return@map TenantTask(it, rentField, newRentField, monthlyIncentiveField, reviewType, anniversary)
         }
     }

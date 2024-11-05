@@ -15,6 +15,6 @@ data class TenantTask(
 
     enum class ReviewType(val needReview: Boolean = true) {
 
-        CPI, PERCENTAGE, MANUAL(false), NA(false)
+        CPI, PERCENTAGE, MARKET, AGENT(false), NA(false)
     }
 }

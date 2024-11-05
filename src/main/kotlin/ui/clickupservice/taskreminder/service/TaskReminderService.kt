@@ -5,102 +5,18 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import ui.clickupservice.emailservice.EmailService
-import ui.clickupservice.leasing.service.LeasingService
-import ui.clickupservice.shared.extension.formatNumber
 import ui.clickupservice.shared.extension.toDateFormat
 import ui.clickupservice.shared.extension.toLocalDate
 import ui.clickupservice.taskreminder.data.PaymentTask
-import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.*
 
 @Service
-class TaskReminderService(val taskService: TaskService, val leasingService: LeasingService, val emailService: EmailService) {
+class TaskReminderService(val taskService: TaskService, val emailService: EmailService) {
 
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(TaskReminderService::class.java)
-    }
-
-    @Scheduled(cron = "0 0 0 1 * *")
-    fun updateTenantsInRentReview() {
-        val now = LocalDate.now().month
-
-        taskService.getTenancyScheduleTasks().filter {
-            return@filter it.task.taskStatus == "rent review"
-        }.forEach { it ->
-            val diff = now.compareTo(it.task.dueDate.toLocalDate().month)
-
-            if (diff == 0) {
-                println("New rent in effect for ${it.task.name}, change status")
-                taskService.updateTaskStatus(it.task, "lease commenced").also {
-                    println("Task has successfully been updated - ${it.taskStatus}")
-                }
-
-                taskService.updateCustomField(it.task, "Annual Rent",  it.newRent.formatNumber())
-                taskService.updateCustomField(it.task, "New Rent", "")
-            }
-        }
-    }
-
-    @Scheduled(cron = "0 0 8 L * *")
-    fun sendTenantRentReview(): String {
-        val now = LocalDate.now()
-
-        val tenancies = taskService.getTenancyScheduleTasks().filter { it ->
-            val t = it.task
-
-            if (t.taskStatus == "lease commenced" && it.reviewType.needReview) {
-                val diff = ChronoUnit.MONTHS.between(LocalDate.now().withDayOfMonth(1), it.anniversaryDate)
-                println("${t.name} $diff")
-                return@filter diff.toInt() <= 3
-            }
-
-            return@filter t.taskStatus == "rent review"
-        }.onEach { it ->
-            val t = it.task
-
-            if (t.taskStatus != "rent review") {
-                println("Updating task ${t.name} to RENT REVIEW")
-
-//                taskService.updateTaskStatus(t, "rent review").also {
-//                    println("Task has successfully been updated - ${it.taskStatus}")
-//                }
-            }
-        }
-
-        val content = buildString {
-            appendLine("Tenants Upcoming Rent Review (All figures are GST exclusive)")
-            appendLine()
-            append("${"Tenancy".padEnd(30)} | ${"Anniversary".padEnd(12)} | ${"Current Rent".padEnd(15)} | ${"New Rent (CPI)".padEnd(15)} | New Monthly Rent").appendLine()
-            appendLine("".padEnd(100, '-'))
-
-            tenancies.forEach { t ->
-                val it = t.task
-                var newRent = ""
-
-                val cpiRent = try {
-                    val cpiRent = leasingService.calculateRent(t.rent, t.anniversaryDate)
-                    taskService.updateCustomField(it, "New Rent", cpiRent.first.formatNumber())
-
-                    "${cpiRent.first.formatNumber()} (${cpiRent.second})".also {
-                        newRent = (cpiRent.first / BigDecimal(12) - t.monthlyIncentive).formatNumber() // .divide(BigDecimal(12)).minus(t.monthlyIncentive).formatNumber()
-                    }
-                } catch (e: Exception) {
-                    println(e)
-                    "Waiting for CPI"
-                }
-
-                append(it.name.padEnd(30)).append(" | ").append(t.anniversaryDate.toString().padEnd(12)).append(" | ")
-                    .append(t.rent.formatNumber().padEnd(15)).append(" | ")
-                    .append(cpiRent.padEnd(15)).append((" | "))
-                    .append(newRent.padEnd(20))
-                    .appendLine()
-            }
-        }
-        println(content)
-        emailService.sendDynamicEmail("Tenant Rent Review", content, mapOf("listId" to TaskService.TENANCY_SCHEDULE_LIST_ID))
-        return content
     }
 
     @Scheduled(cron = "0 0 9 1W * TUE")

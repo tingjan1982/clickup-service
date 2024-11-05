@@ -13,7 +13,10 @@ import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.exception.BusinessException
 
 /**
- * Reference for SendGrid dynamic template: https://stackoverflow.com/questions/53860093/showing-command-line-output-on-a-html-page/53860562
+ * Reference for SendGrid dynamic template:
+ *
+ * https://stackoverflow.com/questions/53860093/showing-command-line-output-on-a-html-page/53860562
+ * https://github.com/sendgrid/sendgrid-java/blob/main/examples/helpers/mail/Example.java#L30
  */
 @Service
 class EmailService(val configProperties: ConfigProperties) {
