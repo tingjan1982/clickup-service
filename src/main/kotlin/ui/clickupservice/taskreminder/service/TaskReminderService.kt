@@ -33,14 +33,10 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
             }
 
             return@filter t.taskStatus == "option period"
-        }.onEach { it ->
+        }.onEach {
             val t = it.task
             if (t.taskStatus != "option period") {
-                println("Updating task ${t.name} to OPTION PERIOD")
-
-                taskService.updateTaskStatus(t, "option period").let {
-                    println("Task has successfully been updated - ${it.taskStatus}")
-                }
+                taskService.updateTaskStatus(t, "option period")
             }
         }
 
@@ -69,7 +65,6 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
      */
     @Scheduled(cron = "0 0 9 * * TUE")
     fun sendPaymentReminder(): String {
-
         LOGGER.info("Sending task reminder at ${Date()}")
 
         val tasksGroupedByStatus = getScheduledOrTodoTasks()

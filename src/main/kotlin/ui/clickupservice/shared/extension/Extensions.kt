@@ -56,10 +56,7 @@ fun LocalDate.getLastQuarter(): Int {
     }
 }
 
-fun LocalDate.isInReviewPeriod(): Boolean {
-    val now = LocalDate.now()
-    val currentQuarter = now.getQuarter()
-
+fun LocalDate.isInReviewPeriod(currentQuarter: Int): Boolean {
     return this.getQuarter() == currentQuarter
 }
 

@@ -21,10 +21,15 @@ class LeasingService {
         )
     }
 
-    fun calculateRent(rent: BigDecimal, anniversary: LocalDate): Pair<BigDecimal, Float> {
+    fun calculatePercentageRent(rent: BigDecimal, percentage: BigDecimal): BigDecimal {
+
+        return rent.multiply(percentage.divide(BigDecimal(100)).add(BigDecimal.ONE))
+    }
+
+    fun calculateCpiRent(rent: BigDecimal, anniversary: LocalDate): BigDecimal {
 
         val cpiFigure = getCpiFigure(anniversary)
-        return rent.multiply(cpiFigure.toBigDecimal()) to cpiFigure
+        return rent.multiply(cpiFigure.toBigDecimal())
     }
 
     internal fun getCpiFigure(anniversary: LocalDate): Float {

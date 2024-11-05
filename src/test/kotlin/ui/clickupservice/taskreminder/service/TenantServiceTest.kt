@@ -14,9 +14,9 @@ class TenantServiceTest(@Autowired val tenantService: TenantService) {
     }
 
     @Test
-    fun checkTenantRentReview() {
+    fun sendTenantsInRentReview() {
 
-        tenantService.sendTenantRentReview()
+        tenantService.sendTenantsInRentReview()
     }
 
 }

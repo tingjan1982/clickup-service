@@ -2,6 +2,8 @@ package ui.clickupservice.taskreminder.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
@@ -33,6 +35,8 @@ class TaskService(
     companion object {
         const val PAYMENT_SCHEDULE_LIST_ID = "900303019042"
         const val TENANCY_SCHEDULE_LIST_ID = "900302094609"
+
+        val LOGGER: Logger = LoggerFactory.getLogger(TaskService::class.java)
     }
 
     fun getTenancyScheduleTasks(): List<TenantTask> {
@@ -45,16 +49,18 @@ class TaskService(
             val newRentField = it.customFields.first { it.name == "New Rent" }.toBigDecimal()
             val monthlyIncentiveField = it.customFields.first { it.name == "Monthly Incentive" }.toBigDecimal()
             val reviewType = it.customFields.first { it.name == "Review Type" }.toEnumType<TenantTask.ReviewType>(TenantTask.ReviewType.NA)
+            val percentage = it.customFields.first { it.name == "Percentage" }.toBigDecimal()
 
             val anniversary = it.startDate.toLocalDate().let {
                 return@let LocalDate.of(now.year, it.month, it.dayOfMonth)
             }
 
-            return@map TenantTask(it, rentField, newRentField, monthlyIncentiveField, reviewType, anniversary)
+            return@map TenantTask(it, rentField, newRentField, monthlyIncentiveField, reviewType, percentage, anniversary)
         }
     }
 
     fun updateTaskStatus(task: Tasks.Task, status: String): Tasks.Task {
+        LOGGER.info("${task.name} - updating status to ${status.uppercase()}")
 
         val payload = mapOf("status" to status)
         val request = requestHelper.putRequest("api/v2/task/${task.id}", payload)
@@ -62,10 +68,12 @@ class TaskService(
         httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
 
             if (it.statusCode() != 200) {
-                throw BusinessException("Problem updating tasks in ClickUp")
+                throw BusinessException("Problem updating task in ClickUp: ${it.body()}")
             }
 
-            return objectMapper.readValue<Tasks.Task>(it.body())
+            return objectMapper.readValue<Tasks.Task>(it.body()).also {
+                LOGGER.info("success")
+            }
         }
     }
 
@@ -78,7 +86,7 @@ class TaskService(
         httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
 
             if (it.statusCode() != 200) {
-                throw BusinessException("Problem updating custom field in ClickUp")
+                throw BusinessException("Problem updating custom field in ClickUp: ${it.body()}")
             }
 
             return "success"

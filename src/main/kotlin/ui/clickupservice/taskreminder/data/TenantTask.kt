@@ -9,12 +9,13 @@ data class TenantTask(
     val newRent: BigDecimal,
     val monthlyIncentive: BigDecimal,
     val reviewType: ReviewType,
+    val percentage: BigDecimal,
     val anniversaryDate: LocalDate
 ) {
 
 
     enum class ReviewType(val needReview: Boolean = true) {
 
-        CPI, PERCENTAGE, MARKET, AGENT(false), NA(false)
+        CPI, PERCENT, MARKET, AGENT(false), NA(false)
     }
 }

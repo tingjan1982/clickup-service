@@ -35,7 +35,7 @@ $it
     @GetMapping("/rentReview")
     fun sendTenantRentReviewReminder(): String {
 
-        tenantService.sendTenantRentReview().let {
+        tenantService.sendTenantsInRentReview().let {
             return """
             <pre style="font-family: monospace">
 $it
