@@ -1,25 +1,14 @@
 package ui.clickupservice.leasing.service
 
 import org.springframework.stereotype.Service
+import ui.clickupservice.leasing.data.LeasingConfigProperties
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.Month
 
-@Service
-class LeasingService {
 
-    companion object {
-        val cpiFigures: Map<String, Float> = mapOf(
-            "2022-4" to 132.1f,
-            "2023-1" to 134.6f,
-            "2023-2" to 136f,
-            "2023-3" to 137f,
-            "2023-4" to 137.7f,
-            "2024-1" to 139.2f,
-            "2024-2" to 140.6f,
-            "2024-3" to 139.4f
-        )
-    }
+@Service
+class LeasingService(val leasingConfigProperties: LeasingConfigProperties) {
 
     fun calculatePercentageRent(rent: BigDecimal, percentage: BigDecimal): BigDecimal {
 
@@ -32,9 +21,10 @@ class LeasingService {
         return rent.multiply(cpiFigure.toBigDecimal())
     }
 
-    internal fun getCpiFigure(anniversary: LocalDate): Float {
+    internal fun getCpiFigure(anniversary: LocalDate): Double {
 
         val year = anniversary.year
+        val cpiFigures = leasingConfigProperties.cpiFigures
 
         val quarter = when (anniversary.month) {
             Month.JANUARY, Month.FEBRUARY, Month.MARCH -> Pair(year - 1, 4)

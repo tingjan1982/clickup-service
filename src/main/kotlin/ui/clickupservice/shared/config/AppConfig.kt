@@ -31,10 +31,14 @@ class TaskServiceConfig {
         return objectMapper
     }
 
+    /**
+     * https://www.baeldung.com/java-spring-fix-403-error
+     */
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
 
-        return http.authorizeHttpRequests { auth ->
+        return http.csrf { it.disable() }
+            .authorizeHttpRequests { auth ->
             auth.anyRequest().permitAll()
         }.build()
     }
