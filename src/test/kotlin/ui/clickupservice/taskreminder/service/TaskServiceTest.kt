@@ -12,4 +12,13 @@ class TaskServiceTest(@Autowired val service: TaskService) {
 
         service.getTenancyScheduleTasks()
     }
+
+    @Test
+    fun getPlannedPaymentTasks() {
+
+        service.getPlannedPaymentTasks().forEach { t ->
+            val it = t.task
+            println("${it.name} ${it.id} ${it.toTagString()}")
+        }
+    }
 }

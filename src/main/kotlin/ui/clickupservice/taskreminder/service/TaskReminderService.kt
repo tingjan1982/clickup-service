@@ -82,13 +82,8 @@ class TaskReminderService(val taskService: TaskService, val emailService: EmailS
 
     private fun getScheduledOrTodoTasks() = taskService.getUpcomingAndOverdueTasks()
         .filter {
-            it.taskStatus != "payment plan"
-        }.map { it ->
-            val paymentField = it.customFields.first { it.name == "Payment" }.toBigDecimal()
-            return@map PaymentTask(it, paymentField)
-
-        }
-        .groupBy {
+            it.task.taskStatus != "payment plan"
+        }.groupBy {
             it.task.taskStatus
         }
 

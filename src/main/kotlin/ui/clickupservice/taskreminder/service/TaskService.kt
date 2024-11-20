@@ -11,6 +11,7 @@ import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.exception.BusinessException
 import ui.clickupservice.shared.extension.toLocalDate
 import ui.clickupservice.taskreminder.config.TaskConfigProperties
+import ui.clickupservice.taskreminder.data.PaymentTask
 import ui.clickupservice.taskreminder.data.Tasks
 import ui.clickupservice.taskreminder.data.TenantTask
 import java.net.URI
@@ -94,7 +95,7 @@ class TaskService(
     }
 
 
-    fun getUpcomingAndOverdueTasks(): List<Tasks.Task> {
+    fun getUpcomingAndOverdueTasks(): List<PaymentTask> {
 
         val params = HashMap<String, String>()
         params["archived"] = "false"
@@ -108,9 +109,33 @@ class TaskService(
             val days = ChronoUnit.DAYS.between(today, it.dueDate.toLocalDate())
 
             return@filter days <= taskConfigProperties.upcomingTasksDays
+        }.map { it ->
+            val paymentField = it.customFields.first { it.name == "Payment" }.toBigDecimal()
+            val type = it.customFields.first { it.name == "Type" }.toEnumType<PaymentTask.Type>(PaymentTask.Type.NA)
+
+            return@map PaymentTask(it, type, paymentField)
         }
 
         return overdueTasks
+    }
+
+    fun getPlannedPaymentTasks(): List<PaymentTask> {
+
+        val params = HashMap<String, String>()
+        params["archived"] = "false"
+        params["order_by"] = "due_date"
+        params["reverse"] = "true"
+        params["subtasks"] = "true"
+        //params["statuses[0]"] = "payment plan"
+        params["statuses[0]"] = "scheduled"
+        params["statuses[1]"] = "paid"
+
+        return getTaskRequest(PAYMENT_SCHEDULE_LIST_ID, params).tasks.map { it ->
+            val paymentField = it.customFields.first { it.name == "Payment" }.toBigDecimal()
+            val type = it.customFields.first { it.name == "Type" }.toEnumType<PaymentTask.Type>(PaymentTask.Type.NA)
+
+            return@map PaymentTask(it, type, paymentField)
+        }
     }
 
     fun getTaskRequest(listId: String, params: Map<String, String>): Tasks {
@@ -120,7 +145,7 @@ class TaskService(
         httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
 
             if (it.statusCode() != 200) {
-                throw BusinessException("Problem getting tasks from ClickUp")
+                throw BusinessException("Problem getting tasks from ClickUp: ${it.body()}")
             }
 
             return objectMapper.readValue<Tasks>(it.body())
