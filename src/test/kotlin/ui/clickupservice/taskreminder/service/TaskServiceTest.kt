@@ -21,4 +21,13 @@ class TaskServiceTest(@Autowired val service: TaskService) {
             println("${it.name} ${it.id} ${it.toTagString()}")
         }
     }
+
+    @Test
+    fun getLoanTasks() {
+
+        service.getLoanTasks().forEach { t ->
+            val it = t.task
+            println("${it.name} ${it.id} ${it.toTagString()}")
+        }
+    }
 }

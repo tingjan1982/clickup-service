@@ -11,6 +11,7 @@ import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.exception.BusinessException
 import ui.clickupservice.shared.extension.toLocalDate
 import ui.clickupservice.taskreminder.config.TaskConfigProperties
+import ui.clickupservice.taskreminder.data.LoanTask
 import ui.clickupservice.taskreminder.data.PaymentTask
 import ui.clickupservice.taskreminder.data.Tasks
 import ui.clickupservice.taskreminder.data.TenantTask
@@ -36,8 +37,25 @@ class TaskService(
     companion object {
         const val PAYMENT_SCHEDULE_LIST_ID = "900303019042"
         const val TENANCY_SCHEDULE_LIST_ID = "900302094609"
+        const val LOAN_SCHEDULE_LIST_ID = "900300072412"
 
         val LOGGER: Logger = LoggerFactory.getLogger(TaskService::class.java)
+    }
+
+    fun getLoanTasks(): List<LoanTask> {
+
+        val params = HashMap<String, String>()
+        params["archived"] = "false"
+        params["order_by"] = "due_date"
+        params["reverse"] = "true"
+
+        return getTaskRequest(LOAN_SCHEDULE_LIST_ID, params).tasks.map { it ->
+            val loan = it.customFields.first { it.name == "Loan" }.toBigDecimal()
+            val paymentField = it.customFields.first { it.name == "Payment" }.toBigDecimal()
+
+            return@map LoanTask(it, loan, paymentField)
+        }
+
     }
 
     fun getTenancyScheduleTasks(): List<TenantTask> {

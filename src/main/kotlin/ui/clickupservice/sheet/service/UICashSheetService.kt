@@ -17,7 +17,9 @@ import com.google.api.services.sheets.v4.model.ValueRange
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
+import ui.clickupservice.shared.extension.formatNumber
 import ui.clickupservice.shared.extension.toDateFormat
+import ui.clickupservice.taskreminder.data.LoanTask
 import ui.clickupservice.taskreminder.data.PaymentTask
 import ui.clickupservice.taskreminder.service.TaskService
 import java.io.File
@@ -48,8 +50,9 @@ class UICashSheetService(@Value("classpath:/credentials.json") val resource: Res
             "rbm" to "RBM",
             "rbhp" to "RBHP",
             "super" to "SUPER",
-            "bab" to "BAB"
-            )
+            "bab" to "BAB",
+            "lpjp" to "LPJP"
+        )
 
     }
 
@@ -84,65 +87,139 @@ class UICashSheetService(@Value("classpath:/credentials.json") val resource: Res
             .setApplicationName(APPLICATION_NAME)
             .build()
 
-        val response = service.spreadsheets().values()[SHEET_ID, TRANSACTIONS_RANGE].execute()
-
-        val tasks = taskService.getPlannedPaymentTasks()
+        val paymentTasks = taskService.getPlannedPaymentTasks()
             .groupBy {
                 return@groupBy "${it.type.displayName}:${convertTag(it.task.toTagString())}:${it.task.dueDate.toDateFormat()}"
             }
             .toMutableMap()
 
-        println("Total planned payments: ${tasks.size}")
+        val loanTasks = taskService.getLoanTasks()
+            .groupBy {
+                return@groupBy "${convertTag(it.task.toTagString())}:${it.task.dueDate.toDateFormat()}:${it.loan}"
+            }
+            .toMutableMap()
+
+        println("Total planned payments: ${paymentTasks.size}")
+        println("Total planned loans: ${loanTasks.size}")
 
         val data: MutableList<ValueRange> = mutableListOf()
 
-        response.getValues().onEachIndexed { idx, row ->
-            val searchKey = "${row[0]}:${row[3]}:${row[1]}"
+        service.spreadsheets().values()[SHEET_ID, TRANSACTIONS_RANGE].execute().getValues().onEachIndexed { idx, row ->
 
-            if(row[4] != "PAID") {
-                tasks[searchKey]?.let {
+            val rowsBeforeTransactions = 11
+
+            if (row[4] != "PAID") {
+                val paymentSk = "${row[0]}:${row[3]}:${row[1]}"
+
+                paymentTasks[paymentSk]?.let {
                     val rowIdx = idx + 11
-                    val cellRange = "E${idx+11}"
+                    val cellRange = "E${idx + rowsBeforeTransactions}"
                     println("Found payment on row $rowIdx - $row")
                     val task = it.first().task
                     data.add(ValueRange().setRange(cellRange).setValues(listOf(listOf(task.taskStatus?.uppercase(), task.name, task.id))))
 
-                    tasks.remove(searchKey)
+                    paymentTasks.remove(paymentSk)
+                }
+
+                val loanSk = buildString {
+                    append("${row[3]}:${row[1]}:")
+
+                    if (row.size >= 6) {
+                        append(row[5])
+                    }
+                }
+
+                loanTasks[loanSk]?.let {
+                    val rowIdx = idx + 11
+                    val cellRange = "E${idx + rowsBeforeTransactions}"
+                    println("Found loan on row $rowIdx - $row")
+                    val task = it.first().task
+                    data.add(
+                        ValueRange().setRange(cellRange)
+                            .setValues(listOf(listOf(task.taskStatus?.uppercase(), it.first().loan.formatNumber(), task.id)))
+                    )
+
+                    loanTasks.remove(loanSk)
                 }
             }
         }
 
         updateTasks(data, service)
-        createTasks(tasks, service)
+        createTasks(paymentTasks, loanTasks, service)
     }
 
     private fun updateTasks(data: MutableList<ValueRange>, service: Sheets) {
 
         print("Found ${data.size} records, updating..... ")
         val body = BatchUpdateValuesRequest()
-            .setValueInputOption("RAW")
+            .setValueInputOption("USER_ENTERED")
             .setData(data)
 
         val result = service.spreadsheets().values().batchUpdate(SHEET_ID, body).execute()
-        println("Total updated rows: : ${result.totalUpdatedRows}")
+        println("Total updated rows: ${result.totalUpdatedRows}")
     }
 
-    private fun createTasks(tasks: MutableMap<String, List<PaymentTask>>, service: Sheets) {
+    private fun createTasks(
+        paymentTasks: MutableMap<String, List<PaymentTask>>,
+        loanTasks: MutableMap<String, List<LoanTask>>,
+        service: Sheets
+    ) {
 
-        println("Total planned payments to create: ${tasks.size}")
+        println("Total planned payments to process: ${paymentTasks.size}")
 
-        tasks.forEach {
+        paymentTasks.filter {
+            it.value.first().task.taskStatus !in arrayOf("payment plan", "paid")
+        }.forEach {
             val task = it.value.first()
-            val body = ValueRange().setValues(listOf(listOf(task.type.displayName, task.task.dueDate.toDateFormat(), task.payment, convertTag(task.task.toTagString()), task.task.taskStatus?.uppercase(), task.task.name, task.task.id)))
+            val body = ValueRange().setValues(
+                listOf(
+                    listOf(
+                        task.type.displayName,
+                        task.task.dueDate.toDateFormat(),
+                        task.payment,
+                        convertTag(task.task.toTagString()),
+                        task.task.taskStatus?.uppercase(),
+                        task.task.name,
+                        task.task.id
+                    )
+                )
+            )
 
             val result = service.spreadsheets().values().append(SHEET_ID, TRANSACTIONS_RANGE, body)
                 .setValueInputOption("USER_ENTERED")
                 .setInsertDataOption("INSERT_ROWS")
                 .execute()
 
-            println("Appended row: ${result.updates.updatedRows}")
+            println("Created row (${result.updates.updatedRows}): ${task.task.name}")
         }
 
+        println("Total loans to process: ${loanTasks.size}")
+
+        loanTasks.filter {
+            it.value.first().task.taskStatus !in arrayOf("payment plan", "paid")
+        }.forEach {
+            val task = it.value.first()
+            val body = ValueRange().setValues(
+                listOf(
+                    listOf(
+                        PaymentTask.Type.INTEREST.displayName,
+                        task.task.dueDate.toDateFormat(),
+                        task.payment,
+                        convertTag(task.task.toTagString()),
+                        task.task.taskStatus?.uppercase(),
+                        task.loan,
+                        task.task.id
+                    )
+                )
+            )
+
+            val result = service.spreadsheets().values().append(SHEET_ID, TRANSACTIONS_RANGE, body)
+                .setValueInputOption("USER_ENTERED")
+                .setInsertDataOption("INSERT_ROWS")
+                .execute()
+
+            println("Created row (${result.updates.updatedRows}): ${task.task.name}")
+        }
 
     }
 

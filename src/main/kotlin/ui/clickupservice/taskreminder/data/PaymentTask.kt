@@ -6,13 +6,15 @@ data class PaymentTask(val task: Tasks.Task, val type: Type, val payment: BigDec
 
     enum class Type(val displayName: String) {
 
-        ATO("ATO"),
         ASIC("ASIC"),
+        ATO("ATO"),
         EXPENSE("Expense"),
         INSURANCE("Insurance"),
-        LAND_RENT("Land rent"),
-        LAND_TAX("Land tax"),
+        LAND_RENT("Land Rent"),
+        LAND_TAX("Land Tax"),
         LEVY("Levy"),
-        RATE("Rate"), NA("")
+        RATE("Rate"),
+        INTEREST("Interest"),
+        NA("")
     }
 }
