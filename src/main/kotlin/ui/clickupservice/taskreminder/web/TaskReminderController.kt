@@ -3,17 +3,17 @@ package ui.clickupservice.taskreminder.web
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import ui.clickupservice.taskreminder.service.TaskReminderService
+import ui.clickupservice.taskreminder.service.ScheduledTaskService
 import ui.clickupservice.taskreminder.service.TenantService
 
 @RestController
 @RequestMapping("/services")
-class TaskReminderController(val taskReminderService: TaskReminderService, val tenantService: TenantService) {
+class TaskReminderController(val scheduledTaskService: ScheduledTaskService, val tenantService: TenantService) {
 
     @GetMapping("/payments")
     fun sendPaymentReminder(): String {
 
-        taskReminderService.sendPaymentReminder().let {
+        scheduledTaskService.sendPaymentReminder().let {
             return """
             <pre style="font-family: monospace">
 $it
@@ -22,9 +22,9 @@ $it
     }
 
     @GetMapping("/optionPeriod")
-    fun sendOptionPeriodReminder(): String {
+    fun sendTenantOptionPeriod(): String {
 
-        taskReminderService.sendTenantOptionPeriod().let {
+        scheduledTaskService.sendTenantOptionPeriod().let {
             return """
             <pre style="font-family: monospace">
 $it
@@ -33,7 +33,7 @@ $it
     }
 
     @GetMapping("/rentReview")
-    fun sendTenantRentReviewReminder(): String {
+    fun sendTenantsInRentReview(): String {
 
         tenantService.sendTenantsInRentReview().let {
             return """

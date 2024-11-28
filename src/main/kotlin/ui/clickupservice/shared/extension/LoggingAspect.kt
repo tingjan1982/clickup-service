@@ -6,14 +6,14 @@ import org.aspectj.lang.annotation.Aspect
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import ui.clickupservice.taskreminder.service.TaskReminderService
+import ui.clickupservice.taskreminder.service.ScheduledTaskService
 
 @Component
 @Aspect
 class LoggingAspect {
 
     companion object {
-        val LOGGER: Logger = LoggerFactory.getLogger(TaskReminderService::class.java)
+        val LOGGER: Logger = LoggerFactory.getLogger(ScheduledTaskService::class.java)
     }
 
 

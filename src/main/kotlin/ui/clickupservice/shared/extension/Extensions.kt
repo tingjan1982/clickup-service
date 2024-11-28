@@ -16,7 +16,7 @@ import java.util.*
 class Extensions {
     companion object {
         val df = SimpleDateFormat("dd/MM/yyyy")
-        val dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val dtf: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
         val nf = DecimalFormat("#.##")
 

@@ -13,10 +13,10 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 
 @Service
-class TaskReminderService(val taskService: TaskService, val emailService: EmailService) {
+class ScheduledTaskService(val taskService: TaskService, val emailService: EmailService) {
 
     companion object {
-        val LOGGER: Logger = LoggerFactory.getLogger(TaskReminderService::class.java)
+        val LOGGER: Logger = LoggerFactory.getLogger(ScheduledTaskService::class.java)
     }
 
     @Scheduled(cron = "0 0 9 1W * TUE")

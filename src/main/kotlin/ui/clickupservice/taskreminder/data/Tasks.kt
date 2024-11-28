@@ -29,7 +29,6 @@ data class Tasks(var tasks: List<Task>) {
             return tags.joinToString { it.name }
         }
 
-
         data class Tag(
             val name: String
         )

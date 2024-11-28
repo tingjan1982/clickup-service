@@ -11,4 +11,5 @@ class ConfigProperties {
     lateinit var authenticationToken: String
     lateinit var sendgridApiKey: String
     lateinit var notificationEmail: String
+    lateinit var googleCredentials: String
 }

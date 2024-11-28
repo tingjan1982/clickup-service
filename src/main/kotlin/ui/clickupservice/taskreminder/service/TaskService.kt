@@ -81,7 +81,12 @@ class TaskService(
     fun updateTaskStatus(task: Tasks.Task, status: String): Tasks.Task {
         LOGGER.info("${task.name} - updating status to ${status.uppercase()}")
 
-        val payload = mapOf("status" to status)
+        return updateTask(task, mapOf("status" to status))
+    }
+
+    fun updateTask(task: Tasks.Task, payload: Map<String, String>): Tasks.Task {
+        LOGGER.info("${task.name} - updating task using $payload")
+
         val request = requestHelper.putRequest("api/v2/task/${task.id}", payload)
         val httpClient = HttpClient.newBuilder().build()
         httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let { it ->
@@ -93,8 +98,7 @@ class TaskService(
             return objectMapper.readValue<Tasks.Task>(it.body()).also {
                 LOGGER.info("success")
             }
-        }
-    }
+        }    }
 
     fun updateCustomField(task: Tasks.Task, fieldName: String, value: String): String {
 

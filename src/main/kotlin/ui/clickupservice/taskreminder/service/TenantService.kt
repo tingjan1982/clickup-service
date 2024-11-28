@@ -15,7 +15,7 @@ import java.time.LocalDate
 class TenantService(val taskService: TaskService, val leasingService: LeasingService, val emailService: EmailService) {
 
     companion object {
-        val LOGGER: Logger = LoggerFactory.getLogger(TaskReminderService::class.java)
+        val LOGGER: Logger = LoggerFactory.getLogger(ScheduledTaskService::class.java)
     }
 
     @Scheduled(cron = "0 0 0 L * *")

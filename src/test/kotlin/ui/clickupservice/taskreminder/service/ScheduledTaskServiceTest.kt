@@ -5,23 +5,23 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 
 @SpringBootTest
-class TaskReminderServiceTest(@Autowired val taskReminderService: TaskReminderService) {
+class ScheduledTaskServiceTest(@Autowired val scheduledTaskService: ScheduledTaskService) {
 
     @Test
     fun sendTenantOptionPeriod() {
 
-        taskReminderService.sendTenantOptionPeriod()
+        scheduledTaskService.sendTenantOptionPeriod()
     }
 
     @Test
     fun sendPaymentReminder() {
 
-        taskReminderService.sendPaymentReminder()
+        scheduledTaskService.sendPaymentReminder()
     }
 
     @Test
     fun createPaymentSummaryContent() {
 
-        println(taskReminderService.createPaymentSummaryContent())
+        println(scheduledTaskService.createPaymentSummaryContent())
     }
 }

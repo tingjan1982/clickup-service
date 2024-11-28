@@ -14,26 +14,31 @@ import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest
 import com.google.api.services.sheets.v4.model.ValueRange
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
+import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.extension.formatNumber
 import ui.clickupservice.shared.extension.toDateFormat
 import ui.clickupservice.taskreminder.data.LoanTask
 import ui.clickupservice.taskreminder.data.PaymentTask
 import ui.clickupservice.taskreminder.service.TaskService
 import java.io.File
-import java.io.InputStreamReader
+import java.io.StringReader
+import java.time.LocalDate
 
 
+/**
+ * This is another way to load resource via @Value annotation.
+ * @Value("file:./credentials.json") val resource: Resource,
+ */
 @Service
-class UICashSheetService(@Value("classpath:/credentials.json") val resource: Resource, val taskService: TaskService) {
+class UICashSheetService(val taskService: TaskService, val configProperties: ConfigProperties) {
 
     companion object {
         private const val APPLICATION_NAME: String = "UI Sheet"
         private const val SHEET_ID = "106RJju-J-NNvnu_TdfbxbZZUFUgIAp_Xheu3KKzE2dU"
         private const val TOKENS_DIRECTORY_PATH: String = "tokens"
         private const val TRANSACTIONS_RANGE = "Cashflow Planning!Transactions"
+        private const val ROWS_BEFORE_TRANSACTIONS = 11
 
         private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
         private val SCOPES: List<String> = listOf(SheetsScopes.SPREADSHEETS)
@@ -51,15 +56,12 @@ class UICashSheetService(@Value("classpath:/credentials.json") val resource: Res
             "rbhp" to "RBHP",
             "super" to "SUPER",
             "bab" to "BAB",
-            "lpjp" to "LPJP"
+            "lpjp" to "LPJP",
+            "personal" to "PER"
         )
 
     }
 
-    /**
-     * Prints the names and majors of students in a sample spreadsheet:
-     * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-     */
     fun readCashPosition() {
 
         val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
@@ -87,65 +89,86 @@ class UICashSheetService(@Value("classpath:/credentials.json") val resource: Res
             .setApplicationName(APPLICATION_NAME)
             .build()
 
-        val paymentTasks = taskService.getPlannedPaymentTasks()
-            .groupBy {
-                return@groupBy "${it.type.displayName}:${convertTag(it.task.toTagString())}:${it.task.dueDate.toDateFormat()}"
-            }
-            .toMutableMap()
-
-        val loanTasks = taskService.getLoanTasks()
-            .groupBy {
-                return@groupBy "${convertTag(it.task.toTagString())}:${it.task.dueDate.toDateFormat()}:${it.loan}"
-            }
-            .toMutableMap()
-
-        println("Total planned payments: ${paymentTasks.size}")
-        println("Total planned loans: ${loanTasks.size}")
-
         val data: MutableList<ValueRange> = mutableListOf()
 
+        val paymentTasks = taskService.getPlannedPaymentTasks()
+            .groupByTo(mutableMapOf()) {
+                it.task.id
+            }.also {
+                println("Total planned payments: ${it.size}")
+            }
+
+        val loanTasks = taskService.getLoanTasks()
+            .groupByTo(mutableMapOf()) {
+                it.task.id
+            }.also {
+                println("Total planned loans: ${it.size}")
+
+            }
+
         service.spreadsheets().values()[SHEET_ID, TRANSACTIONS_RANGE].execute().getValues().onEachIndexed { idx, row ->
-
-            val rowsBeforeTransactions = 11
-
             if (row[4] != "PAID") {
-                val paymentSk = "${row[0]}:${row[3]}:${row[1]}"
-
-                paymentTasks[paymentSk]?.let {
-                    val rowIdx = idx + 11
-                    val cellRange = "E${idx + rowsBeforeTransactions}"
-                    println("Found payment on row $rowIdx - $row")
-                    val task = it.first().task
-                    data.add(ValueRange().setRange(cellRange).setValues(listOf(listOf(task.taskStatus?.uppercase(), task.name, task.id))))
-
-                    paymentTasks.remove(paymentSk)
-                }
-
-                val loanSk = buildString {
-                    append("${row[3]}:${row[1]}:")
-
-                    if (row.size >= 6) {
-                        append(row[5])
-                    }
-                }
-
-                loanTasks[loanSk]?.let {
-                    val rowIdx = idx + 11
-                    val cellRange = "E${idx + rowsBeforeTransactions}"
-                    println("Found loan on row $rowIdx - $row")
-                    val task = it.first().task
-                    data.add(
-                        ValueRange().setRange(cellRange)
-                            .setValues(listOf(listOf(task.taskStatus?.uppercase(), it.first().loan.formatNumber(), task.id)))
-                    )
-
-                    loanTasks.remove(loanSk)
-                }
+                syncPaymentTask(row, idx, paymentTasks, data)
+                syncLoanTask(row, idx, loanTasks, data)
             }
         }
 
         updateTasks(data, service)
         createTasks(paymentTasks, loanTasks, service)
+    }
+
+    private fun syncPaymentTask(row: MutableList<Any>, idx: Int, paymentTasks: MutableMap<String, MutableList<PaymentTask>>, data: MutableList<ValueRange>) {
+
+        val paymentSk = if (row.size >= 7) { row[6] } else { "" }
+
+        paymentTasks[paymentSk]?.let {
+            val rowIdx = idx + 11
+            val cellRange = "A${idx + ROWS_BEFORE_TRANSACTIONS}"
+            println("Found payment ${row[0]} on row $rowIdx - $row")
+
+            val task = it.first().task
+            data.add(
+                ValueRange().setRange(cellRange)
+                    .setValues(listOf(listOf(
+                        it.first().type.displayName,
+                        task.dueDate.toDateFormat(),
+                        it.first().payment.formatNumber(),
+                        convertTag(task.toTagString()),
+                        task.taskStatus?.uppercase(),
+                        task.name,
+                        task.id,
+                        "Last updated: ${LocalDate.now().toDateFormat()}")))
+            )
+
+            paymentTasks.remove(paymentSk)
+        }
+    }
+
+    private fun syncLoanTask(row: MutableList<Any>, idx: Int, loanTasks: MutableMap<String, MutableList<LoanTask>>, data: MutableList<ValueRange>) {
+
+        val loanSk = if (row.size >= 7) { row[6] } else { "" }
+
+        loanTasks[loanSk]?.let {
+            val rowIdx = idx + 11
+            val cellRange = "A${idx + ROWS_BEFORE_TRANSACTIONS}"
+            println("Found loan ${row[0]} on row $rowIdx - ${row[6]}")
+
+            val task = it.first().task
+            data.add(
+                ValueRange().setRange(cellRange)
+                    .setValues(listOf(listOf(
+                        PaymentTask.Type.INTEREST.displayName,
+                        task.dueDate.toDateFormat(),
+                        it.first().payment.formatNumber(),
+                        convertTag(task.toTagString()),
+                        task.taskStatus?.uppercase(),
+                        it.first().loan.formatNumber(),
+                        task.id,
+                        "Last updated: ${LocalDate.now().toDateFormat()}")))
+            )
+
+            loanTasks.remove(loanSk)
+        }
     }
 
     private fun updateTasks(data: MutableList<ValueRange>, service: Sheets) {
@@ -159,13 +182,9 @@ class UICashSheetService(@Value("classpath:/credentials.json") val resource: Res
         println("Total updated rows: ${result.totalUpdatedRows}")
     }
 
-    private fun createTasks(
-        paymentTasks: MutableMap<String, List<PaymentTask>>,
-        loanTasks: MutableMap<String, List<LoanTask>>,
-        service: Sheets
-    ) {
+    private fun createTasks(paymentTasks: MutableMap<String, MutableList<PaymentTask>>, loanTasks: MutableMap<String, MutableList<LoanTask>>, service: Sheets) {
 
-        println("Total planned payments to process: ${paymentTasks.size}")
+        println("Total planned payments to create: ${paymentTasks.size}")
 
         paymentTasks.filter {
             it.value.first().task.taskStatus !in arrayOf("payment plan", "paid")
@@ -180,7 +199,8 @@ class UICashSheetService(@Value("classpath:/credentials.json") val resource: Res
                         convertTag(task.task.toTagString()),
                         task.task.taskStatus?.uppercase(),
                         task.task.name,
-                        task.task.id
+                        task.task.id,
+                        "Created: ${LocalDate.now().toDateFormat()}"
                     )
                 )
             )
@@ -193,7 +213,7 @@ class UICashSheetService(@Value("classpath:/credentials.json") val resource: Res
             println("Created row (${result.updates.updatedRows}): ${task.task.name}")
         }
 
-        println("Total loans to process: ${loanTasks.size}")
+        println("Total loans to create: ${loanTasks.size}")
 
         loanTasks.filter {
             it.value.first().task.taskStatus !in arrayOf("payment plan", "paid")
@@ -208,7 +228,8 @@ class UICashSheetService(@Value("classpath:/credentials.json") val resource: Res
                         convertTag(task.task.toTagString()),
                         task.task.taskStatus?.uppercase(),
                         task.loan,
-                        task.task.id
+                        task.task.id,
+                        "Created: ${LocalDate.now().toDateFormat()}"
                     )
                 )
             )
@@ -229,7 +250,7 @@ class UICashSheetService(@Value("classpath:/credentials.json") val resource: Res
 
     private fun getCredentials(transport: NetHttpTransport): Credential {
 
-        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, InputStreamReader(resource.inputStream))
+        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, StringReader(configProperties.googleCredentials))
 
         // Build flow and trigger user authorization request.
         val flow = GoogleAuthorizationCodeFlow.Builder(transport, JSON_FACTORY, clientSecrets, SCOPES)
