@@ -38,7 +38,7 @@ class UICashSheetService(val taskService: TaskService, val configProperties: Con
         private const val SHEET_ID = "106RJju-J-NNvnu_TdfbxbZZUFUgIAp_Xheu3KKzE2dU"
         private const val TOKENS_DIRECTORY_PATH: String = "tokens"
         private const val TRANSACTIONS_RANGE = "Cashflow Planning!Transactions"
-        private const val ROWS_BEFORE_TRANSACTIONS = 11
+        private const val ROWS_BEFORE_TRANSACTIONS = 12
 
         private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
         private val SCOPES: List<String> = listOf(SheetsScopes.SPREADSHEETS)
@@ -119,25 +119,34 @@ class UICashSheetService(val taskService: TaskService, val configProperties: Con
 
     private fun syncPaymentTask(row: MutableList<Any>, idx: Int, paymentTasks: MutableMap<String, MutableList<PaymentTask>>, data: MutableList<ValueRange>) {
 
-        val paymentSk = if (row.size >= 7) { row[6] } else { "" }
+        val paymentSk = if (row.size >= 7) {
+            row[6]
+        } else {
+            ""
+        }
 
         paymentTasks[paymentSk]?.let {
-            val rowIdx = idx + 11
+            val rowIdx = idx + ROWS_BEFORE_TRANSACTIONS
             val cellRange = "A${idx + ROWS_BEFORE_TRANSACTIONS}"
             println("Found payment ${row[0]} on row $rowIdx - $row")
 
             val task = it.first().task
             data.add(
                 ValueRange().setRange(cellRange)
-                    .setValues(listOf(listOf(
-                        it.first().type.displayName,
-                        task.dueDate.toDateFormat(),
-                        it.first().payment.formatNumber(),
-                        convertTag(task.toTagString()),
-                        task.taskStatus?.uppercase(),
-                        task.name,
-                        task.id,
-                        "Last updated: ${LocalDate.now().toDateFormat()}")))
+                    .setValues(
+                        listOf(
+                            listOf(
+                                it.first().type.displayName,
+                                task.dueDate.toDateFormat(),
+                                it.first().payment.formatNumber(),
+                                convertTag(task.toTagString()),
+                                task.taskStatus?.uppercase(),
+                                task.name,
+                                task.id,
+                                "Last updated: ${LocalDate.now().toDateFormat()}"
+                            )
+                        )
+                    )
             )
 
             paymentTasks.remove(paymentSk)
@@ -146,25 +155,34 @@ class UICashSheetService(val taskService: TaskService, val configProperties: Con
 
     private fun syncLoanTask(row: MutableList<Any>, idx: Int, loanTasks: MutableMap<String, MutableList<LoanTask>>, data: MutableList<ValueRange>) {
 
-        val loanSk = if (row.size >= 7) { row[6] } else { "" }
+        val loanSk = if (row.size >= 7) {
+            row[6]
+        } else {
+            ""
+        }
 
         loanTasks[loanSk]?.let {
-            val rowIdx = idx + 11
+            val rowIdx = idx + ROWS_BEFORE_TRANSACTIONS
             val cellRange = "A${idx + ROWS_BEFORE_TRANSACTIONS}"
             println("Found loan ${row[0]} on row $rowIdx - ${row[6]}")
 
             val task = it.first().task
             data.add(
                 ValueRange().setRange(cellRange)
-                    .setValues(listOf(listOf(
-                        PaymentTask.Type.INTEREST.displayName,
-                        task.dueDate.toDateFormat(),
-                        it.first().payment.formatNumber(),
-                        convertTag(task.toTagString()),
-                        task.taskStatus?.uppercase(),
-                        it.first().loan.formatNumber(),
-                        task.id,
-                        "Last updated: ${LocalDate.now().toDateFormat()}")))
+                    .setValues(
+                        listOf(
+                            listOf(
+                                PaymentTask.Type.INTEREST.displayName,
+                                task.dueDate.toDateFormat(),
+                                it.first().payment.formatNumber(),
+                                convertTag(task.toTagString()),
+                                task.taskStatus?.uppercase(),
+                                it.first().loan.formatNumber(),
+                                task.id,
+                                "Last updated: ${LocalDate.now().toDateFormat()}"
+                            )
+                        )
+                    )
             )
 
             loanTasks.remove(loanSk)
@@ -184,10 +202,10 @@ class UICashSheetService(val taskService: TaskService, val configProperties: Con
 
     private fun createTasks(paymentTasks: MutableMap<String, MutableList<PaymentTask>>, loanTasks: MutableMap<String, MutableList<LoanTask>>, service: Sheets) {
 
-        println("Total planned payments to create: ${paymentTasks.size}")
-
         paymentTasks.filter {
             it.value.first().task.taskStatus !in arrayOf("payment plan", "paid")
+        }.also {
+            println("Total planned payments to create: ${it.size}")
         }.forEach {
             val task = it.value.first()
             val body = ValueRange().setValues(
@@ -213,10 +231,10 @@ class UICashSheetService(val taskService: TaskService, val configProperties: Con
             println("Created row (${result.updates.updatedRows}): ${task.task.name}")
         }
 
-        println("Total loans to create: ${loanTasks.size}")
-
         loanTasks.filter {
             it.value.first().task.taskStatus !in arrayOf("payment plan", "paid")
+        }.also {
+            println("Total loans to create: ${it.size}")
         }.forEach {
             val task = it.value.first()
             val body = ValueRange().setValues(
