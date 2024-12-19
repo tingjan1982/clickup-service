@@ -7,13 +7,14 @@ import org.springframework.stereotype.Service
 import ui.clickupservice.emailservice.EmailService
 import ui.clickupservice.shared.extension.toDateFormat
 import ui.clickupservice.shared.extension.toLocalDate
-import ui.clickupservice.taskreminder.data.PaymentTask
+import ui.clickupservice.taskreminder.config.TaskConfigProperties
+import ui.clickupservice.taskreminder.data.ExpenseTask
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.*
 
 @Service
-class ScheduledTaskService(val taskService: TaskService, val emailService: EmailService) {
+class ScheduledTaskService(val taskService: TaskService, val emailService: EmailService, val taskConfigProperties: TaskConfigProperties) {
 
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(ScheduledTaskService::class.java)
@@ -67,7 +68,7 @@ class ScheduledTaskService(val taskService: TaskService, val emailService: Email
     fun sendPaymentReminder(): String {
         LOGGER.info("Sending task reminder at ${Date()}")
 
-        val tasksGroupedByStatus = getScheduledOrTodoTasks()
+        val tasksGroupedByStatus = getExpenseTasks()
 
         val content = createPaymentSummaryContent(tasksGroupedByStatus)
         println(content)
@@ -80,18 +81,36 @@ class ScheduledTaskService(val taskService: TaskService, val emailService: Email
         return content
     }
 
-    private fun getScheduledOrTodoTasks() = taskService.getUpcomingAndOverdueTasks()
-        .filter {
-            it.task.taskStatus != "payment plan"
-        }.groupBy {
-            it.task.taskStatus
-        }
+    private fun getExpenseTasks(): Map<String?, List<ExpenseTask>> {
 
-    internal fun createPaymentSummaryContent(tasksGroupedByStatus: Map<String?, List<PaymentTask>> = getScheduledOrTodoTasks()): String {
+        val paymentTasks = taskService.getUpcomingAndOverdueTasks()
+            .filter {
+                it.task.taskStatus != "payment plan"
+            }.groupBy {
+                it.task.taskStatus
+            }
+
+        val today = LocalDate.now()
+        val loanTasks = taskService.getLoanTasks()
+            .filter {
+                val days = ChronoUnit.DAYS.between(today, it.task.dueDate.toLocalDate())
+
+                return@filter days <= taskConfigProperties.upcomingTasksDays
+            }
+            .filter {
+                it.task.taskStatus != "paid"
+            }.groupBy {
+                it.task.taskStatus
+            }
+
+        return paymentTasks + loanTasks
+    }
+
+    internal fun createPaymentSummaryContent(tasksGroupedByStatus: Map<String?, List<ExpenseTask>> = getExpenseTasks()): String {
         val content = buildString {
             var paddingLength: Int
 
-            appendLine("Upcoming Payments Summary")
+            appendLine("Upcoming Payments Summary (till ${LocalDate.now().plusDays(taskConfigProperties.upcomingTasksDays.toLong()).toDateFormat()})")
             appendLine()
             appendLine("Please see the following upcoming payments grouped by status:")
             appendLine()
@@ -105,11 +124,11 @@ class ScheduledTaskService(val taskService: TaskService, val emailService: Email
                 appendLine("".padEnd(paddingLength, '='))
 
                 it.value.forEach { tt ->
-                    val t = tt.task
+                    val t = tt.getWrappedTask()
 
                     append(t.name.padEnd(45)).append("(${t.toTagString()})".padEnd(20))
                         .append(" due on ${t.dueDate.toDateFormat()}".padEnd(10))
-                        .append("  $${tt.payment}")
+                        .append("  $${tt.getPaymentAmount()}")
                         .appendLine()
                 }
 

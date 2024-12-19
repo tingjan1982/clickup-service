@@ -131,11 +131,8 @@ class TaskService(
             val days = ChronoUnit.DAYS.between(today, it.dueDate.toLocalDate())
 
             return@filter days <= taskConfigProperties.upcomingTasksDays
-        }.map { it ->
-            val paymentField = it.customFields.first { it.name == "Payment" }.toBigDecimal()
-            val type = it.customFields.first { it.name == "Type" }.toEnumType<PaymentTask.Type>(PaymentTask.Type.NA)
-
-            return@map PaymentTask(it, type, paymentField)
+        }.map {
+            return@map PaymentTask.toPaymentTask(it)
         }
 
         return overdueTasks
@@ -152,11 +149,8 @@ class TaskService(
         params["statuses[0]"] = "scheduled"
         params["statuses[1]"] = "paid"
 
-        return getTaskRequest(PAYMENT_SCHEDULE_LIST_ID, params).tasks.map { it ->
-            val paymentField = it.customFields.first { it.name == "Payment" }.toBigDecimal()
-            val type = it.customFields.first { it.name == "Type" }.toEnumType<PaymentTask.Type>(PaymentTask.Type.NA)
-
-            return@map PaymentTask(it, type, paymentField)
+        return getTaskRequest(PAYMENT_SCHEDULE_LIST_ID, params).tasks.map {
+            return@map PaymentTask.toPaymentTask(it)
         }
     }
 
