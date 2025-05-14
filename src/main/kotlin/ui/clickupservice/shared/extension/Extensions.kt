@@ -26,7 +26,9 @@ class Extensions {
             return Date.from(anniversary)
         }
 
-
+        fun parseLocalDate(dateStr: String): LocalDate {
+            return LocalDate.parse(dateStr, dtf)
+        }
     }
 }
 

@@ -16,6 +16,12 @@ class UICashSheetServiceTest(@Autowired val uiCashSheetService: UICashSheetServi
     }
 
     @Test
+    fun updateCashPosition() {
+
+        uiCashSheetService.updateCashPosition()
+    }
+
+    @Test
     fun syncPlannedPayments() {
 
         uiCashSheetService.syncPlannedPayments()

@@ -15,6 +15,7 @@ import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest
 import com.google.api.services.sheets.v4.model.ValueRange
 import org.springframework.stereotype.Service
+import ui.clickupservice.bankexport.service.BankExportService
 import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.extension.formatNumber
 import ui.clickupservice.shared.extension.toDateFormat
@@ -31,7 +32,7 @@ import java.time.LocalDate
  * @Value("file:./credentials.json") val resource: Resource,
  */
 @Service
-class UICashSheetService(val taskService: TaskService, val configProperties: ConfigProperties) {
+class UICashSheetService(val balanceService: BankExportService, val taskService: TaskService, val configProperties: ConfigProperties) {
 
     companion object {
         private const val APPLICATION_NAME: String = "UI Sheet"
@@ -80,6 +81,51 @@ class UICashSheetService(val taskService: TaskService, val configProperties: Con
                 println(row)
             }
         }
+    }
+
+    fun updateCashPosition() {
+
+        val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
+        val service = Sheets.Builder(httpTransport, JSON_FACTORY, getCredentials(httpTransport))
+            .setApplicationName(APPLICATION_NAME)
+            .build()
+
+        val body = ValueRange()
+            .setRange("Cashflow Planning!K1")
+            .setValues(listOf(listOf(LocalDate.now().toString())))
+
+        service.spreadsheets().values()
+            .update(SHEET_ID, "Cashflow Planning!K1", body)
+            .setValueInputOption("USER_ENTERED")
+            .execute()
+
+        val bankAccounts = balanceService.readBankBalance()
+
+        val valueRange = ValueRange().setRange("Cashflow Planning!B4")
+            .setValues(
+                listOf(
+                    listOf(
+                        bankAccounts["BAB"]?.balance.toString(),
+                        bankAccounts["CF"]?.balance.toString(),
+                        bankAccounts["CF2"]?.balance.toString(),
+                        bankAccounts["CF3"]?.balance.toString(),
+                        bankAccounts["CF6"]?.balance.toString(),
+                        bankAccounts["CF7"]?.balance.toString(),
+                        bankAccounts["LPJP"]?.balance.toString(),
+                        bankAccounts["PHKA"]?.balance.toString(),
+                        bankAccounts["PHKD"]?.balance.toString(),
+                        bankAccounts["RBM"]?.balance.toString(),
+                        bankAccounts["RBHP"]?.balance.toString(),
+                        bankAccounts["UI"]?.balance.toString()
+                    )
+                )
+            )
+
+        val request = BatchUpdateValuesRequest()
+            .setValueInputOption("USER_ENTERED")
+            .setData(listOf(valueRange))
+
+        service.spreadsheets().values().batchUpdate(SHEET_ID, request).execute()
     }
 
     fun syncPlannedPayments() {
