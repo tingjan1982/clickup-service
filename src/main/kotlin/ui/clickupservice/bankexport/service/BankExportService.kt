@@ -24,7 +24,8 @@ class BankExportService {
             "706231" to "RBM",
             "566910" to "RBHP",
             "728262" to "UI-SAVING",
-            "166194" to "UI"
+            "166194" to "UI",
+            "132947" to "PER"
         )
 
         private val csvDir = "/Users/joelin/Downloads/csv"
@@ -47,10 +48,13 @@ class BankExportService {
             .distinctBy { it.account }
             .associateBy { it.entity }
 
+        csvFile.delete()
+        println("Bank balance file has been deleted: ${csvFile.name}")
+
         return bankAccounts
     }
 
-    fun readDebitTransactions(): Map<String, List<DebitBankTransaction>> {
+    fun readDebitTransactions(): List<DebitBankTransaction> {
 
         val dir = File("$csvDir/transactions")
         val csvFile = dir.listFiles { file -> file.extension == "csv" }?.firstOrNull()!!
@@ -58,14 +62,19 @@ class BankExportService {
         val transactions = csvFile.readLines()
             .asSequence()
             .drop(1)
+            .map { it.split(",") }
+            .filter { it[0].length > 4 }
             .map {
-                val values = it.split(",")
-                val debitAmount = values[3].ifBlank { "0" }
-                DebitBankTransaction(values[0], ACCOUNT_MAP[values[0].substring(6)] ?: "", BigDecimal(debitAmount), Extensions.parseLocalDate(values[1]))
+                val accountNumber = it[0]
+                val debitAmount = it[3].ifBlank { "0" }
+                DebitBankTransaction(accountNumber, ACCOUNT_MAP[accountNumber.substring(6)] ?: "", BigDecimal(debitAmount), Extensions.parseLocalDate(it[1]))
             }
             .filter { it.entity.isNotBlank() }
             .filter { it.debitAmount > BigDecimal.ZERO }
-            .groupBy { it.entity }
+            .toList()
+
+        csvFile.delete()
+        println("Transactions file has been deleted: ${csvFile.name}")
 
         return transactions
     }

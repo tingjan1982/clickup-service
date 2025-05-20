@@ -9,7 +9,7 @@ import ui.clickupservice.bankexport.service.BankExportService
 class BankExportServiceTest(@Autowired val service: BankExportService) {
 
     @Test
-    fun test() {
+    fun readBankBalance() {
 
         service.readBankBalance().forEach {
             println(it)
@@ -19,6 +19,8 @@ class BankExportServiceTest(@Autowired val service: BankExportService) {
     @Test
     fun readTransactions() {
 
-        service.readDebitTransactions()
+        service.readDebitTransactions().forEach {
+            println(it)
+        }
     }
 }

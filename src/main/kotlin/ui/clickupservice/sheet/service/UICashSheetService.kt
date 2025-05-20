@@ -16,6 +16,7 @@ import com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest
 import com.google.api.services.sheets.v4.model.ValueRange
 import org.springframework.stereotype.Service
 import ui.clickupservice.bankexport.service.BankExportService
+import ui.clickupservice.shared.TagConversionUtils
 import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.extension.formatNumber
 import ui.clickupservice.shared.extension.toDateFormat
@@ -43,24 +44,6 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
 
         private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
         private val SCOPES: List<String> = listOf(SheetsScopes.SPREADSHEETS)
-
-        private val TAGS_MAP: Map<String, String> = mapOf(
-            "ui-harbour" to "UI",
-            "cf-bribie" to "CF",
-            "cf2-gympie" to "CF2",
-            "cf3-bundaberg" to "CF3",
-            "cf6-tannum" to "CF6",
-            "cf7-townsville" to "CF7",
-            "phkd" to "PHKD",
-            "phka" to "PHKA",
-            "rbm" to "RBM",
-            "rbhp" to "RBHP",
-            "super" to "SUPER",
-            "bab" to "BAB",
-            "lpjp" to "LPJP",
-            "personal" to "PER"
-        )
-
     }
 
     fun readCashPosition() {
@@ -129,6 +112,7 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
     }
 
     fun syncPlannedPayments() {
+        println("Sync planned payments...")
 
         val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
         val service = Sheets.Builder(httpTransport, JSON_FACTORY, getCredentials(httpTransport))
@@ -185,7 +169,7 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
                                 it.first().type.displayName,
                                 task.dueDate.toDateFormat(),
                                 it.first().payment.formatNumber(),
-                                convertTag(task.toTagString()),
+                                TagConversionUtils.convertTag(task.toTagString()),
                                 task.taskStatus?.uppercase(),
                                 task.name,
                                 task.id,
@@ -221,7 +205,7 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
                                 PaymentTask.Type.INTEREST.displayName,
                                 task.dueDate.toDateFormat(),
                                 it.first().payment.formatNumber(),
-                                convertTag(task.toTagString()),
+                                TagConversionUtils.convertTag(task.toTagString()),
                                 task.taskStatus?.uppercase(),
                                 it.first().loan.formatNumber(),
                                 task.id,
@@ -260,7 +244,7 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
                         task.type.displayName,
                         task.task.dueDate.toDateFormat(),
                         task.payment,
-                        convertTag(task.task.toTagString()),
+                        TagConversionUtils.convertTag(task.task.toTagString()),
                         task.task.taskStatus?.uppercase(),
                         task.task.name,
                         task.task.id,
@@ -289,7 +273,7 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
                         PaymentTask.Type.INTEREST.displayName,
                         task.task.dueDate.toDateFormat(),
                         task.payment,
-                        convertTag(task.task.toTagString()),
+                        TagConversionUtils.convertTag(task.task.toTagString()),
                         task.task.taskStatus?.uppercase(),
                         task.loan,
                         task.task.id,
@@ -306,10 +290,6 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
             println("Created row (${result.updates.updatedRows}): ${task.task.name}")
         }
 
-    }
-
-    private fun convertTag(tag: String): String {
-        return TAGS_MAP[tag] ?: throw Exception("tag is not found: $tag")
     }
 
     private fun getCredentials(transport: NetHttpTransport): Credential {
