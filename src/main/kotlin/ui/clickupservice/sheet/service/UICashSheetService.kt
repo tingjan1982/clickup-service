@@ -1,21 +1,11 @@
 package ui.clickupservice.sheet.service
 
-import com.google.api.client.auth.oauth2.Credential
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
-import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
-import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.json.JsonFactory
-import com.google.api.client.json.gson.GsonFactory
-import com.google.api.client.util.store.FileDataStoreFactory
 import com.google.api.services.sheets.v4.Sheets
-import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest
 import com.google.api.services.sheets.v4.model.ValueRange
 import org.springframework.stereotype.Service
 import ui.clickupservice.bankexport.service.BankExportService
+import ui.clickupservice.shared.GoogleApiUtils
 import ui.clickupservice.shared.TagConversionUtils
 import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.extension.formatNumber
@@ -23,8 +13,6 @@ import ui.clickupservice.shared.extension.toDateFormat
 import ui.clickupservice.taskreminder.data.LoanTask
 import ui.clickupservice.taskreminder.data.PaymentTask
 import ui.clickupservice.taskreminder.service.TaskService
-import java.io.File
-import java.io.StringReader
 import java.time.LocalDate
 
 
@@ -33,26 +21,23 @@ import java.time.LocalDate
  * @Value("file:./credentials.json") val resource: Resource,
  */
 @Service
-class UICashSheetService(val balanceService: BankExportService, val taskService: TaskService, val configProperties: ConfigProperties) {
+class UICashSheetService(
+    val balanceService: BankExportService,
+    val taskService: TaskService,
+    val configProperties: ConfigProperties,
+    val googleApiUtils: GoogleApiUtils
+) {
 
     companion object {
-        private const val APPLICATION_NAME: String = "UI Sheet"
         private const val SHEET_ID = "106RJju-J-NNvnu_TdfbxbZZUFUgIAp_Xheu3KKzE2dU"
-        private const val TOKENS_DIRECTORY_PATH: String = "tokens"
         private const val TRANSACTIONS_RANGE = "Cashflow Planning!Transactions"
         private const val ROWS_BEFORE_TRANSACTIONS = 12
-
-        private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
-        private val SCOPES: List<String> = listOf(SheetsScopes.SPREADSHEETS)
     }
 
     fun readCashPosition() {
 
-        val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
         val range = "Cashflow Planning!A3:M6"
-        val service = Sheets.Builder(httpTransport, JSON_FACTORY, getCredentials(httpTransport))
-            .setApplicationName(APPLICATION_NAME)
-            .build()
+        val service = googleApiUtils.getSheetService()
 
         val response = service.spreadsheets().values()[SHEET_ID, range].execute()
         val values: List<List<Any>> = response.getValues()
@@ -68,10 +53,7 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
 
     fun updateCashPosition() {
 
-        val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
-        val service = Sheets.Builder(httpTransport, JSON_FACTORY, getCredentials(httpTransport))
-            .setApplicationName(APPLICATION_NAME)
-            .build()
+        val service = googleApiUtils.getSheetService()
 
         val body = ValueRange()
             .setRange("Cashflow Planning!K1")
@@ -114,10 +96,7 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
     fun syncPlannedPayments() {
         println("Sync planned payments...")
 
-        val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
-        val service = Sheets.Builder(httpTransport, JSON_FACTORY, getCredentials(httpTransport))
-            .setApplicationName(APPLICATION_NAME)
-            .build()
+        val service = googleApiUtils.getSheetService()
 
         val data: MutableList<ValueRange> = mutableListOf()
 
@@ -290,19 +269,5 @@ class UICashSheetService(val balanceService: BankExportService, val taskService:
             println("Created row (${result.updates.updatedRows}): ${task.task.name}")
         }
 
-    }
-
-    private fun getCredentials(transport: NetHttpTransport): Credential {
-
-        val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, StringReader(configProperties.googleCredentials))
-
-        // Build flow and trigger user authorization request.
-        val flow = GoogleAuthorizationCodeFlow.Builder(transport, JSON_FACTORY, clientSecrets, SCOPES)
-            .setDataStoreFactory(FileDataStoreFactory(File(TOKENS_DIRECTORY_PATH)))
-            .setAccessType("offline")
-            .build()
-
-        val receiver = LocalServerReceiver.Builder().setPort(8888).build()
-        return AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
     }
 }
