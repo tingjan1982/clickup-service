@@ -3,6 +3,7 @@ package ui.clickupservice.taskreminder.service
 import org.springframework.stereotype.Service
 import ui.clickupservice.bankexport.service.BankExportService
 import ui.clickupservice.shared.TagConversionUtils
+import ui.clickupservice.shared.extension.formatNumber
 import ui.clickupservice.shared.extension.toDateFormat
 import ui.clickupservice.sheet.service.UICashSheetService
 
@@ -13,14 +14,14 @@ class BankTransactionSyncService(val bankExportService: BankExportService, val t
 
         val loanTasks = taskService.getLoanTasks()
             .filter { it.task.taskStatus != "paid" }
-            .associateBy { "${TagConversionUtils.convertTag(it.task.toTagString())}-${it.payment}" }
+            .associateBy { "${TagConversionUtils.convertTag(it.task.toTagString())}-${it.payment.formatNumber()}" }
 
         val paymentTasks = taskService.getPlannedPaymentTasks()
             .filter { it.task.taskStatus != "paid" }
-            .associateBy { "${TagConversionUtils.convertTag(it.task.toTagString())}-${it.task.dueDate.toDateFormat()}-${it.payment}" }
+            .associateBy { "${TagConversionUtils.convertTag(it.task.toTagString())}-${it.task.dueDate.toDateFormat()}-${it.payment.formatNumber()}" }
 
         bankExportService.readDebitTransactions().forEach { it ->
-            val keyToSearch = "${it.entity}-${it.date.toDateFormat()}-${it.debitAmount.stripTrailingZeros()}"
+            val keyToSearch = "${it.entity}-${it.date.toDateFormat()}-${it.debitAmount.formatNumber()}"
 
             paymentTasks[keyToSearch]?.let {
                 val task = it.getWrappedTask()
@@ -31,7 +32,7 @@ class BankTransactionSyncService(val bankExportService: BankExportService, val t
                 println(" Updated to PAID ${task.id}")
             }
 
-            val loanKeyToSearch = "${it.entity}-${it.debitAmount.stripTrailingZeros()}"
+            val loanKeyToSearch = "${it.entity}-${it.debitAmount.formatNumber()}"
 
             loanTasks[loanKeyToSearch]?.let {
                 val task = it.getWrappedTask()

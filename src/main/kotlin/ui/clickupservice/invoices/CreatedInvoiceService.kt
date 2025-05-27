@@ -1,5 +1,7 @@
 package ui.clickupservice.invoices
 
+import com.google.api.services.drive.Drive
+import com.google.api.services.drive.model.File
 import com.google.api.services.sheets.v4.model.ValueRange
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.GoogleApiUtils
@@ -10,13 +12,17 @@ import java.io.ByteArrayOutputStream
 @Service
 class CreatedInvoiceService(val pdfInvoiceService: ExtractInvoiceService, val googleApiUtils: GoogleApiUtils) {
 
+    companion object {
+        const val RBG_PENDING_FOLDER_ID = "1lXMXBu4n0hUT3sGhLRTRs9tagoDAjJ-i"
+        const val RBG_FOLDER_ID = "1OKsjIntwO2m8E3f67dX-ZvKsoMc6MnHt"
+    }
+
     fun readGoogleDriveFile() {
 
         val service = googleApiUtils.getDriveService()
 
-        val folderId = "1lXMXBu4n0hUT3sGhLRTRs9tagoDAjJ-i"
         val result = service.files().list()
-            .setQ("'$folderId' in parents and trashed = false")
+            .setQ("'$RBG_PENDING_FOLDER_ID' in parents and trashed = false")
             .setFields("files(id, name)")
             .execute()
 
@@ -35,8 +41,30 @@ class CreatedInvoiceService(val pdfInvoiceService: ExtractInvoiceService, val go
                 println(invoice)
 
                 writeToInvoiceSheet(invoice)
+                updateAndMoveFile(service, file)
             }
         }
+    }
+
+    private fun updateAndMoveFile(service: Drive, file: File) {
+
+        if (!file.name.endsWith("processed")) {
+            println("Mark file as processed: ${file.name}")
+            service.files().update(file.id, File().setName("${file.name} - processed")).execute()
+        }
+
+        val getParent = service.files().get(file.id)
+            .setFields("parents")
+            .execute()
+        val previousParents = getParent.parents?.joinToString(separator = ",")
+
+        val movedFile = service.files().update(file.id, null)
+            .setAddParents(RBG_FOLDER_ID)
+            .setRemoveParents(previousParents)
+            .setFields("id, parents")
+            .execute()
+
+        println("Moved to folder ID: ${movedFile.parents}")
     }
 
     private fun writeToInvoiceSheet(invoice: Invoice) {
@@ -51,7 +79,7 @@ class CreatedInvoiceService(val pdfInvoiceService: ExtractInvoiceService, val go
                     invoice.entity,
                     invoice.invoiceNumber,
                     invoice.description,
-                    "fill in pls",
+                    "FILL IN",
                     invoice.amount.toString(),
                     "REVIEW"
                 )

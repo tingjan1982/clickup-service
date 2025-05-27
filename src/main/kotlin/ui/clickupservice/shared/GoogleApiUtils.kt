@@ -54,7 +54,7 @@ class GoogleApiUtils(val configProperties: ConfigProperties) {
             transport,
             JSON_FACTORY,
             clientSecrets,
-            listOf(DriveScopes.DRIVE_METADATA_READONLY, DriveScopes.DRIVE_READONLY, SheetsScopes.SPREADSHEETS)
+            listOf(DriveScopes.DRIVE_METADATA_READONLY, DriveScopes.DRIVE_READONLY, DriveScopes.DRIVE, SheetsScopes.SPREADSHEETS)
         )
             .setDataStoreFactory(FileDataStoreFactory(File(TOKENS_DIRECTORY_PATH)))
             .setAccessType("offline")
