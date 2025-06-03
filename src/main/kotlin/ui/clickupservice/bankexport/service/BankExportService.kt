@@ -61,7 +61,7 @@ class BankExportService {
     fun readDebitTransactions(): List<DebitBankTransaction> {
 
         val dir = File("$csvDir/transactions")
-        val csvFile = dir.listFiles { file -> file.extension == "csv" }?.firstOrNull()
+        val csvFile = dir.listFiles { file -> file.extension == "csv" && !file.nameWithoutExtension.endsWith("processed") }?.firstOrNull()
 
         csvFile?.let {
             val transactions = csvFile.readLines()
@@ -84,6 +84,6 @@ class BankExportService {
 
             return transactions
 
-        } ?: throw Exception("Transaction file cannot be found")
+        } ?: throw Exception("Transaction file does not exist or it has been mark as processed")
     }
 }

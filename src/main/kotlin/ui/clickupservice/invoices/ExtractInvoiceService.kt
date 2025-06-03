@@ -39,18 +39,7 @@ class ExtractInvoiceService {
     fun extractInvoiceFromPDF(inputStream: InputStream): Invoice {
 
         PDDocument.load(inputStream).use { document ->
-
             return extractInvoiceContent(document)
-
-//            val pdfStripper = PDFTextStripperByArea()
-//            pdfStripper.addRegion("description", Rectangle((0.97 * 72).toInt(), (4.39 * 72).toInt(), (3.3 * 72).toInt(), (0.3 * 72).toInt()))
-//
-//            document.getPage(0).let {
-//                pdfStripper.extractRegions(it)
-//                invoice.description = pdfStripper.getTextForRegion("description").trim()
-//
-//                return invoice
-//            }
         }
     }
 

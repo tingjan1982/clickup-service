@@ -10,14 +10,14 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 @Service
-class CreatedInvoiceService(val pdfInvoiceService: ExtractInvoiceService, val googleApiUtils: GoogleApiUtils) {
+class CreateInvoiceService(val pdfInvoiceService: ExtractInvoiceService, val googleApiUtils: GoogleApiUtils) {
 
     companion object {
         const val RBG_PENDING_FOLDER_ID = "1lXMXBu4n0hUT3sGhLRTRs9tagoDAjJ-i"
         const val RBG_FOLDER_ID = "1OKsjIntwO2m8E3f67dX-ZvKsoMc6MnHt"
     }
 
-    fun readGoogleDriveFile() {
+    fun writeInvoicesFromGoogleDrive() {
 
         val service = googleApiUtils.getDriveService()
 

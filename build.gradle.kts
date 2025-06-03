@@ -36,6 +36,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.sendgrid:sendgrid-java")
     implementation("org.apache.pdfbox:pdfbox:2.0.29")
+    implementation("com.itextpdf:itext7-core:8.0.2")
+    implementation("com.itextpdf:bouncy-castle-adapter:8.0.2")
 
     // google sheet api
     implementation("com.google.api-client:google-api-client:2.2.0")

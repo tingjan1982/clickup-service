@@ -6,11 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 
 @SpringBootTest
-class CreatedInvoiceServiceTest(@Autowired val service: CreatedInvoiceService) {
+class CreateInvoiceServiceTest(@Autowired val service: CreateInvoiceService) {
 
     @Test
-    fun readGoogleDriveFile() {
+    fun writeInvoicesFromGoogleDrive() {
 
-        service.readGoogleDriveFile()
+        service.writeInvoicesFromGoogleDrive()
     }
 }
