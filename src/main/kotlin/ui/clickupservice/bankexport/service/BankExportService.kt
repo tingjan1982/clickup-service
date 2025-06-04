@@ -3,6 +3,7 @@ package ui.clickupservice.bankexport.service
 import org.springframework.stereotype.Service
 import ui.clickupservice.bankexport.data.BankAccount
 import ui.clickupservice.bankexport.data.DebitBankTransaction
+import ui.clickupservice.shared.exception.BusinessException
 import ui.clickupservice.shared.extension.Extensions
 import java.io.File
 import java.math.BigDecimal
@@ -55,7 +56,7 @@ class BankExportService {
 
             return bankAccounts
 
-        } ?: throw Exception("Bank balance file does not exist or it has been mark as processed")
+        } ?: throw BusinessException("Bank balance file does not exist or it has been mark as processed")
     }
 
     fun readDebitTransactions(): List<DebitBankTransaction> {
@@ -84,6 +85,6 @@ class BankExportService {
 
             return transactions
 
-        } ?: throw Exception("Transaction file does not exist or it has been mark as processed")
+        } ?: throw BusinessException("Transaction file does not exist or it has been mark as processed")
     }
 }

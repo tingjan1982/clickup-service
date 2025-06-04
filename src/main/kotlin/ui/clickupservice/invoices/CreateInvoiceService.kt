@@ -5,6 +5,7 @@ import com.google.api.services.drive.model.File
 import com.google.api.services.sheets.v4.model.ValueRange
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.GoogleApiUtils
+import ui.clickupservice.shared.exception.BusinessException
 import ui.clickupservice.shared.extension.toDateFormat
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -17,7 +18,7 @@ class CreateInvoiceService(val pdfInvoiceService: ExtractInvoiceService, val goo
         const val RBG_FOLDER_ID = "1OKsjIntwO2m8E3f67dX-ZvKsoMc6MnHt"
     }
 
-    fun writeInvoicesFromGoogleDrive() {
+    fun writeInvoicesFromGoogleDrive(): Int {
 
         val service = googleApiUtils.getDriveService()
 
@@ -29,6 +30,7 @@ class CreateInvoiceService(val pdfInvoiceService: ExtractInvoiceService, val goo
         val files = result.files
         if (files.isNullOrEmpty()) {
             println("No files found.")
+            throw BusinessException("No files in RBG Pending folder")
         } else {
             for (file in files) {
                 println("Found file: ${file.name} (${file.id})")
@@ -43,6 +45,8 @@ class CreateInvoiceService(val pdfInvoiceService: ExtractInvoiceService, val goo
                 writeToInvoiceSheet(invoice)
                 updateAndMoveFile(service, file)
             }
+
+            return files.count()
         }
     }
 

@@ -1,4 +1,4 @@
-package ui.clickupservice.taskreminder.service
+package ui.clickupservice.banktransction.service
 
 import org.springframework.stereotype.Service
 import ui.clickupservice.bankexport.service.BankExportService
@@ -6,11 +6,12 @@ import ui.clickupservice.shared.TagConversionUtils
 import ui.clickupservice.shared.extension.formatNumber
 import ui.clickupservice.shared.extension.toDateFormat
 import ui.clickupservice.sheet.service.UICashSheetService
+import ui.clickupservice.taskreminder.service.TaskService
 
 @Service
 class BankTransactionSyncService(val bankExportService: BankExportService, val taskService: TaskService, val uiCashSheetService: UICashSheetService) {
 
-    fun syncBankTransactionsWithTasks() {
+    fun syncBankTransactions(): Int {
 
         val loanTasks = taskService.getLoanTasks()
             .filter { it.task.taskStatus != "paid" }
@@ -20,6 +21,7 @@ class BankTransactionSyncService(val bankExportService: BankExportService, val t
             .filter { it.task.taskStatus != "paid" }
             .associateBy { "${TagConversionUtils.convertTag(it.task.toTagString())}-${it.task.dueDate.toDateFormat()}-${it.payment.formatNumber()}" }
 
+        var taskCount = 0
         bankExportService.readDebitTransactions().forEach { it ->
             val keyToSearch = "${it.entity}-${it.date.toDateFormat()}-${it.debitAmount.formatNumber()}"
 
@@ -30,6 +32,7 @@ class BankTransactionSyncService(val bankExportService: BankExportService, val t
                 taskService.updateTaskStatus(task, "PAID")
 
                 println(" Updated to PAID ${task.id}")
+                taskCount++
             }
 
             val loanKeyToSearch = "${it.entity}-${it.debitAmount.formatNumber()}"
@@ -41,10 +44,12 @@ class BankTransactionSyncService(val bankExportService: BankExportService, val t
                 taskService.updateTaskStatus(task, "PAID")
 
                 println(" Updated to PAID ${task.id}")
+                taskCount++
             }
 
         }
 
         uiCashSheetService.syncPlannedPayments()
+        return taskCount
     }
 }

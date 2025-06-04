@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service
 import ui.clickupservice.bankexport.service.BankExportService
 import ui.clickupservice.shared.GoogleApiUtils
 import ui.clickupservice.shared.TagConversionUtils
-import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.extension.formatNumber
 import ui.clickupservice.shared.extension.toDateFormat
 import ui.clickupservice.taskreminder.data.LoanTask
@@ -24,7 +23,6 @@ import java.time.LocalDate
 class UICashSheetService(
     val balanceService: BankExportService,
     val taskService: TaskService,
-    val configProperties: ConfigProperties,
     val googleApiUtils: GoogleApiUtils
 ) {
 
@@ -93,7 +91,7 @@ class UICashSheetService(
         service.spreadsheets().values().batchUpdate(SHEET_ID, request).execute()
     }
 
-    fun syncPlannedPayments() {
+    fun syncPlannedPayments(): Pair<Int, Int> {
         println("Sync planned payments...")
 
         val service = googleApiUtils.getSheetService()
@@ -122,8 +120,10 @@ class UICashSheetService(
             }
         }
 
-        updateTasks(data, service)
-        createTasks(paymentTasks, loanTasks, service)
+        val updatedCount = updateTasks(data, service)
+        val createdCount = createTasks(paymentTasks, loanTasks, service)
+
+        return Pair(updatedCount, createdCount)
     }
 
     private fun syncPaymentTask(row: MutableList<Any>, idx: Int, paymentTasks: MutableMap<String, MutableList<PaymentTask>>, data: MutableList<ValueRange>) {
@@ -198,18 +198,22 @@ class UICashSheetService(
         }
     }
 
-    private fun updateTasks(data: MutableList<ValueRange>, service: Sheets) {
+    private fun updateTasks(data: MutableList<ValueRange>, service: Sheets): Int {
 
         print("Found ${data.size} records, updating..... ")
         val body = BatchUpdateValuesRequest()
             .setValueInputOption("USER_ENTERED")
             .setData(data)
 
-        val result = service.spreadsheets().values().batchUpdate(SHEET_ID, body).execute()
-        println("Total updated rows: ${result.totalUpdatedRows}")
+        service.spreadsheets().values().batchUpdate(SHEET_ID, body).execute().let { result ->
+            println("Total updated rows: ${result.totalUpdatedRows}")
+            return result.totalUpdatedRows
+        }
     }
 
-    private fun createTasks(paymentTasks: MutableMap<String, MutableList<PaymentTask>>, loanTasks: MutableMap<String, MutableList<LoanTask>>, service: Sheets) {
+    private fun createTasks(paymentTasks: MutableMap<String, MutableList<PaymentTask>>, loanTasks: MutableMap<String, MutableList<LoanTask>>, service: Sheets): Int {
+
+        var taskCount = 0
 
         paymentTasks.filter {
             it.value.first().task.taskStatus !in arrayOf("payment plan", "paid")
@@ -238,6 +242,7 @@ class UICashSheetService(
                 .execute()
 
             println("Created row (${result.updates.updatedRows}): ${task.task.name}")
+            taskCount += result.updates.updatedRows
         }
 
         loanTasks.filter {
@@ -267,7 +272,9 @@ class UICashSheetService(
                 .execute()
 
             println("Created row (${result.updates.updatedRows}): ${task.task.name}")
+            taskCount += result.updates.updatedRows
         }
 
+        return taskCount
     }
 }

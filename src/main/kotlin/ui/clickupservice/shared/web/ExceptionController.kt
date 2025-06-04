@@ -6,12 +6,19 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import ui.clickupservice.shared.exception.BusinessException
+import java.io.IOException
 
 @RestControllerAdvice
 class ExceptionController {
 
     @ExceptionHandler(BusinessException::class)
     fun handleControllerException(request: HttpServletRequest, ex: Throwable): ResponseEntity<*> {
+
+        return ResponseEntity(MyErrorBody(400, ex.message.toString()), HttpStatus.BAD_REQUEST)
+    }
+
+    @ExceptionHandler(IOException::class)
+    fun handleIOException(request: HttpServletRequest, ex: Throwable): ResponseEntity<*> {
 
         return ResponseEntity(MyErrorBody(400, ex.message.toString()), HttpStatus.BAD_REQUEST)
     }
