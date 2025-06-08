@@ -12,6 +12,9 @@ import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import org.springframework.web.filter.CorsFilter
 import java.util.*
 
 
@@ -39,8 +42,21 @@ class TaskServiceConfig {
 
         return http.csrf { it.disable() }
             .authorizeHttpRequests { auth ->
-            auth.anyRequest().permitAll()
-        }.build()
+                auth.anyRequest().permitAll()
+            }.build()
+    }
+
+    @Bean
+    fun corsFilter(): CorsFilter {
+        val config = CorsConfiguration()
+        config.allowCredentials = true
+        config.addAllowedOrigin("http://localhost:5173")
+        config.addAllowedHeader("*")
+        config.addAllowedMethod("*")
+
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", config)
+        return CorsFilter(source)
     }
 
     @PostConstruct

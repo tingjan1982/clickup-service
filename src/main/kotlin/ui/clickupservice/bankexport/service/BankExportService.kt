@@ -29,7 +29,7 @@ class BankExportService {
             "132947" to "PER"
         )
 
-        private val csvDir = "/Users/joelin/Downloads/csv"
+        private val csvDir = "/Users/joelin/Downloads/import-source"
     }
 
     fun readBankBalance(): Map<String, BankAccount> {
