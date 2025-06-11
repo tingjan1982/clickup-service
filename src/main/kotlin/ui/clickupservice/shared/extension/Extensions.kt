@@ -2,11 +2,13 @@ package ui.clickupservice.shared.extension
 
 import ui.clickupservice.shared.extension.Extensions.Companion.df
 import ui.clickupservice.shared.extension.Extensions.Companion.dtf
+import ui.clickupservice.shared.extension.Extensions.Companion.dtf2
 import ui.clickupservice.shared.extension.Extensions.Companion.nf
 import java.math.BigDecimal
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.Month
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -17,6 +19,7 @@ class Extensions {
     companion object {
         val df = SimpleDateFormat("dd/MM/yyyy")
         val dtf: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val dtf2: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
 
         val nf = DecimalFormat("#.##")
 
@@ -60,6 +63,10 @@ fun LocalDate.getLastQuarter(): Int {
 
 fun LocalDate.isInReviewPeriod(currentQuarter: Int): Boolean {
     return this.getQuarter() == currentQuarter
+}
+
+fun LocalDateTime.toDateFormat(): String {
+    return this.format(dtf2)
 }
 
 fun BigDecimal.formatNumber(): String {

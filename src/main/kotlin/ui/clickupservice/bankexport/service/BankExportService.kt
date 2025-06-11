@@ -3,9 +3,8 @@ package ui.clickupservice.bankexport.service
 import org.springframework.stereotype.Service
 import ui.clickupservice.bankexport.data.BankAccount
 import ui.clickupservice.bankexport.data.DebitBankTransaction
-import ui.clickupservice.shared.exception.BusinessException
 import ui.clickupservice.shared.extension.Extensions
-import java.io.File
+import java.io.InputStream
 import java.math.BigDecimal
 
 @Service
@@ -28,18 +27,12 @@ class BankExportService {
             "166194" to "UI",
             "132947" to "PER"
         )
-
-        private val csvDir = "/Users/joelin/Downloads/import-source"
     }
 
-    fun readBankBalance(): Map<String, BankAccount> {
+    fun readBankBalance(csvInputStream: InputStream): Map<String, BankAccount> {
 
-        val dir = File(csvDir)
-        val csvFile = dir.listFiles { file -> file.extension == "csv" && !file.nameWithoutExtension.endsWith("processed") }?.firstOrNull()
-
-        csvFile?.let {
-            val bankAccounts = csvFile.readLines()
-                .asSequence()
+        val bankAccounts = csvInputStream.bufferedReader().useLines { lines ->
+            lines
                 .drop(1)
                 .map {
                     val values = it.split(",")
@@ -49,24 +42,15 @@ class BankExportService {
                 .filter { it.entity.isNotBlank() }
                 .distinctBy { it.account }
                 .associateBy { it.entity }
-
-            val newFile = File(csvFile.parentFile, "${csvFile.nameWithoutExtension} - processed.${csvFile.extension}")
-            csvFile.renameTo(newFile)
-            println("Bank balance file has been marked as processed")
-
-            return bankAccounts
-
-        } ?: throw BusinessException("Bank balance file does not exist or it has been mark as processed")
+        }
+        return bankAccounts
     }
 
-    fun readDebitTransactions(): List<DebitBankTransaction> {
+    fun readDebitTransactions(csvInputStream: InputStream): List<DebitBankTransaction> {
 
-        val dir = File("$csvDir/transactions")
-        val csvFile = dir.listFiles { file -> file.extension == "csv" && !file.nameWithoutExtension.endsWith("processed") }?.firstOrNull()
+        val transactions = csvInputStream.bufferedReader().useLines { lines ->
 
-        csvFile?.let {
-            val transactions = csvFile.readLines()
-                .asSequence()
+            lines
                 .drop(1)
                 .map { it.split(",") }
                 .filter { it[0].length > 4 }
@@ -78,13 +62,8 @@ class BankExportService {
                 .filter { it.entity.isNotBlank() }
                 .filter { it.debitAmount > BigDecimal.ZERO }
                 .toList()
+        }
 
-            val newFile = File(csvFile.parentFile, "${csvFile.nameWithoutExtension} - processed.${csvFile.extension}")
-            csvFile.renameTo(newFile)
-            println("Transactions file has been marked as processed")
-
-            return transactions
-
-        } ?: throw BusinessException("Transaction file does not exist or it has been mark as processed")
+        return transactions
     }
 }

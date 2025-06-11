@@ -4,7 +4,7 @@ import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest
 import com.google.api.services.sheets.v4.model.ValueRange
 import org.springframework.stereotype.Service
-import ui.clickupservice.bankexport.service.BankExportService
+import ui.clickupservice.bankexport.data.BankAccount
 import ui.clickupservice.shared.GoogleApiUtils
 import ui.clickupservice.shared.TagConversionUtils
 import ui.clickupservice.shared.extension.formatNumber
@@ -21,7 +21,6 @@ import java.time.LocalDate
  */
 @Service
 class UICashSheetService(
-    val balanceService: BankExportService,
     val taskService: TaskService,
     val googleApiUtils: GoogleApiUtils
 ) {
@@ -49,7 +48,7 @@ class UICashSheetService(
         }
     }
 
-    fun updateCashPosition() {
+    fun updateCashPosition(bankAccounts: Map<String, BankAccount>) {
 
         val service = googleApiUtils.getSheetService()
 
@@ -61,8 +60,6 @@ class UICashSheetService(
             .update(SHEET_ID, "Cashflow Planning!K1", body)
             .setValueInputOption("USER_ENTERED")
             .execute()
-
-        val bankAccounts = balanceService.readBankBalance()
 
         val valueRange = ValueRange().setRange("Cashflow Planning!B4")
             .setValues(

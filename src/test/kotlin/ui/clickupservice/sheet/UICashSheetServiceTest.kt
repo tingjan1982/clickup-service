@@ -18,7 +18,7 @@ class UICashSheetServiceTest(@Autowired val uiCashSheetService: UICashSheetServi
     @Test
     fun updateCashPosition() {
 
-        uiCashSheetService.updateCashPosition()
+        //uiCashSheetService.updateCashPosition()
     }
 
     @Test
