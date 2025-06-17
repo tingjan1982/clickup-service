@@ -8,7 +8,7 @@ import com.itextpdf.kernel.pdf.canvas.parser.listener.LocationTextExtractionStra
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.GoogleApiUtils
 import ui.clickupservice.shared.extension.toDateFormat
-import java.io.File
+import java.io.InputStream
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -25,7 +25,7 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils) {
 
     }
 
-    fun extractTransaction(statement: File) {
+    fun extractTransaction(statement: InputStream) {
 
         PdfDocument(PdfReader(statement)).use { pdfDoc ->
             val pageCount = pdfDoc.numberOfPages
