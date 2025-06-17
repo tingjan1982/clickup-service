@@ -7,6 +7,8 @@ import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor
 import com.itextpdf.kernel.pdf.canvas.parser.listener.LocationTextExtractionStrategy
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.GoogleApiUtils
+import ui.clickupservice.shared.exception.BusinessException
+import ui.clickupservice.shared.extension.Extensions
 import ui.clickupservice.shared.extension.toDateFormat
 import java.io.InputStream
 import java.math.BigDecimal
@@ -25,7 +27,7 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils) {
 
     }
 
-    fun extractTransaction(statement: InputStream) {
+    fun extractTransactions(statement: InputStream) {
 
         PdfDocument(PdfReader(statement)).use { pdfDoc ->
             val pageCount = pdfDoc.numberOfPages
@@ -49,6 +51,11 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils) {
 
                 if (text.contains("Date of")) {
                     println("--- Page $i ---")
+
+                    if (isStatementUploadedBefore(account, dueDate)) {
+                        throw BusinessException("This statement [$account, $dueDate] has already been uploaded before")
+                    }
+
                     text.lines().forEach { line ->
                         Regex("^(\\d{2} \\w{3} \\d{2})(.+\\s+)(\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)( -)?").find(line)?.let {
                             println(line)
@@ -62,6 +69,28 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils) {
                 }
             }
         }
+    }
+
+    fun isStatementUploadedBefore(account: String, dueDate: LocalDate): Boolean {
+
+        val service = googleApiUtils.getSheetService()
+
+        val response = service.spreadsheets().values()[COST_ANALYSIS_SHEET_ID, "Credit Card - Summary!ProcessedStatement"].execute()
+        val values: List<List<Any>> = response.getValues()
+
+        if (values.isEmpty()) {
+            println("No data found.")
+        } else {
+            for (row in values) {
+                println(row)
+
+                if (row[0] == account && Extensions.parseLocalDate(row[1].toString()).isEqual(dueDate)) {
+                    return true
+                }
+            }
+        }
+
+        return false
     }
 
     fun writeTransaction(transaction: Transaction) {

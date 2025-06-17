@@ -15,7 +15,7 @@ class CreditStatementController(val service: CreditStatementService) {
     @PostMapping("/card1212")
     fun importCard1212(@RequestParam("file") file: MultipartFile): ApiResponse {
 
-        service.extractTransaction(file.inputStream)
+        service.extractTransactions(file.inputStream)
         return ApiResponse("Statement 1212 has been imported.")
 
     }
@@ -23,7 +23,7 @@ class CreditStatementController(val service: CreditStatementService) {
     @PostMapping("/card0296")
     fun importCard0296(@RequestParam("file") file: MultipartFile): ApiResponse {
 
-        service.extractTransaction(file.inputStream)
+        service.extractTransactions(file.inputStream)
         return ApiResponse("Statement 0296 has been imported.")
     }
 }

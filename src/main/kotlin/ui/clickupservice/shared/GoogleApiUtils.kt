@@ -24,7 +24,7 @@ class GoogleApiUtils(val configProperties: ConfigProperties) {
 
     companion object {
         private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
-        private const val TOKENS_DIRECTORY_PATH: String = "tokens"
+        private const val TOKENS_DIRECTORY_PATH: String = "./config/tokens"
 
     }
 
