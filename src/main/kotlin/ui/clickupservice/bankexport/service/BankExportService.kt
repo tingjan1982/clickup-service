@@ -1,5 +1,6 @@
 package ui.clickupservice.bankexport.service
 
+import com.opencsv.CSVReader
 import org.springframework.stereotype.Service
 import ui.clickupservice.bankexport.data.BankAccount
 import ui.clickupservice.bankexport.data.DebitBankTransaction
@@ -48,11 +49,10 @@ class BankExportService {
 
     fun readDebitTransactions(csvInputStream: InputStream): List<DebitBankTransaction> {
 
-        val transactions = csvInputStream.bufferedReader().useLines { lines ->
-
-            lines
+        val transactions = CSVReader(csvInputStream.bufferedReader()).use { reader ->
+            val rows = reader.readAll()
+            rows.asSequence()
                 .drop(1)
-                .map { it.split(",") }
                 .filter { it[0].length > 4 }
                 .map {
                     val accountNumber = it[0]
