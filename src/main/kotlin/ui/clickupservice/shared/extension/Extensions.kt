@@ -43,6 +43,11 @@ fun Date.toLocalDate(): LocalDate {
     return LocalDate.ofInstant(this.toInstant(), ZoneId.systemDefault())
 }
 
+fun LocalDate.toDate(): Date {
+    val instant = this.atStartOfDay(ZoneId.systemDefault()).toInstant()
+    return Date.from(instant)
+}
+
 fun LocalDate.toDateFormat(): String {
     return this.format(dtf)
 }

@@ -11,10 +11,7 @@ import ui.clickupservice.shared.config.ConfigProperties
 import ui.clickupservice.shared.exception.BusinessException
 import ui.clickupservice.shared.extension.toLocalDate
 import ui.clickupservice.taskreminder.config.TaskConfigProperties
-import ui.clickupservice.taskreminder.data.LoanTask
-import ui.clickupservice.taskreminder.data.PaymentTask
-import ui.clickupservice.taskreminder.data.Tasks
-import ui.clickupservice.taskreminder.data.TenantTask
+import ui.clickupservice.taskreminder.data.*
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient
@@ -78,6 +75,56 @@ class TaskService(
         }
     }
 
+    fun createTask(listId: String, createTask: CreateTask): Tasks.Task {
+
+        val request = requestHelper.postRequest("api/v2/list/$listId/task", objectMapper.writeValueAsString(createTask))
+        val httpClient = HttpClient.newBuilder().build()
+        httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let {
+
+            if (it.statusCode() != 200) {
+                throw BusinessException("Problem creating task in ClickUp: ${it.body()}")
+            }
+
+            return objectMapper.readValue<Tasks.Task>(it.body())
+        }
+    }
+
+    fun getTaskById(taskId: String): Tasks.Task {
+
+        val request = requestHelper.getRequest("api/v2/task/$taskId", mapOf("include_subtasks" to "true"))
+        val httpClient = HttpClient.newBuilder().build()
+        httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let {
+
+            if (it.statusCode() != 200) {
+                throw BusinessException("Problem getting task in ClickUp: ${it.body()}")
+            }
+
+            return objectMapper.readValue<Tasks.Task>(it.body())
+        }
+    }
+
+    fun deleteSubTasks(taskId: String) {
+
+        this.getTaskById(taskId).let { t->
+            t.subtasks.forEach {
+                println("Deleting ${it.name}")
+                this.deleteTaskById(it.id)
+            }
+        }
+    }
+
+    fun deleteTaskById(taskId: String) {
+
+        val request = requestHelper.deleteRequest("api/v2/task/$taskId")
+        val httpClient = HttpClient.newBuilder().build()
+        httpClient.send(request, HttpResponse.BodyHandlers.ofString()).let {
+
+            if (it.statusCode() != 204) {
+                throw BusinessException("Problem deleting task in ClickUp: ${it.body()}")
+            }
+        }
+    }
+
     fun updateTaskStatus(task: Tasks.Task, status: String): Tasks.Task {
         LOGGER.info("${task.name} - updating status to ${status.uppercase()}")
 
@@ -98,7 +145,8 @@ class TaskService(
             return objectMapper.readValue<Tasks.Task>(it.body()).also {
                 LOGGER.info("success")
             }
-        }    }
+        }
+    }
 
     fun updateCustomField(task: Tasks.Task, fieldName: String, value: String): String {
 
@@ -205,7 +253,19 @@ class TaskService(
 
             val payload = objectMapper.writeValueAsString(requestBody)
 
+            return this.postRequest(url, payload)
+        }
+
+        fun postRequest(url: String, payload: String): HttpRequest {
+
             HttpRequest.newBuilder().POST(HttpRequest.BodyPublishers.ofString(payload)).let {
+                return buildRequest(it, url)
+            }
+        }
+
+        fun deleteRequest(url: String): HttpRequest {
+
+            HttpRequest.newBuilder().DELETE().let {
                 return buildRequest(it, url)
             }
         }

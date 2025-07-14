@@ -23,7 +23,9 @@ data class Tasks(var tasks: List<Task>) {
         var taskStatus: String?,
         var tags: List<Tag>,
         @JsonProperty("custom_fields")
-        var customFields: List<CustomField>
+        var customFields: List<CustomField>,
+        @JsonProperty("subtasks")
+        var subtasks: List<Subtask> = listOf()
     ) {
         fun toTagString(): String {
             return tags.joinToString { it.name }
@@ -58,6 +60,8 @@ data class Tasks(var tasks: List<Task>) {
                 //return if (value != null && value != "0") enumValueOf<E>(value) else defaultValue
             }
         }
+
+        data class Subtask(val id: String, val name: String)
 
         @JsonProperty("status")
         private fun unpackNameFromNestedObject(statusObj: Map<String, String>) {

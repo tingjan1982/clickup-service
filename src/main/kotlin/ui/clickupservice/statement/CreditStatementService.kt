@@ -9,17 +9,24 @@ import org.springframework.stereotype.Service
 import ui.clickupservice.shared.GoogleApiUtils
 import ui.clickupservice.shared.exception.BusinessException
 import ui.clickupservice.shared.extension.Extensions
+import ui.clickupservice.shared.extension.Extensions.Companion.parseLocalDate
+import ui.clickupservice.shared.extension.toDate
 import ui.clickupservice.shared.extension.toDateFormat
+import ui.clickupservice.taskreminder.data.CreateTask
+import ui.clickupservice.taskreminder.data.PaymentTask
+import ui.clickupservice.taskreminder.data.Tasks
+import ui.clickupservice.taskreminder.service.TaskService
+import ui.clickupservice.taskreminder.service.TaskService.Companion.PAYMENT_SCHEDULE_LIST_ID
 import java.io.InputStream
 import java.math.BigDecimal
+import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
 
 
-
 @Service
-class CreditStatementService(val googleApiUtils: GoogleApiUtils) {
+class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService: TaskService) {
 
     companion object {
         val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM yy", Locale.ENGLISH)
@@ -128,5 +135,68 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils) {
             dueDate = dueDate,
             account = account
         )
+    }
+
+    fun populateExpenseTasks(): Pair<String, String> {
+
+        val service = googleApiUtils.getSheetService()
+
+        val response = service.spreadsheets().values()[COST_ANALYSIS_SHEET_ID, "Credit Card - Summary!A1:G19"].execute()
+        val values: List<List<Any>> = response.getValues()
+
+        if (values.isEmpty()) {
+            throw BusinessException("There is no expense found in Credit Card Summary sheet.")
+        } else {
+            values.iterator().let {
+                val firstRow = it.next()
+                val cardNumber = firstRow[1] as String
+                val dueDate = firstRow[3] as String
+
+                println("Card number: $cardNumber, dueDate: $dueDate")
+                it.next()
+                it.next()
+                it.next()
+
+                val parentTaskId = when (cardNumber) {
+                    "1212" -> "86czj3x4c"
+                    "0296" -> "86czj3x4y"
+                    else -> throw BusinessException("Card number is not recognised: $cardNumber")
+                }
+                taskService.deleteSubTasks(parentTaskId)
+
+                it.forEach { row ->
+                    val number = NumberFormat.getCurrencyInstance(Locale.US).parse(row[5] as String)
+                    val amount = BigDecimal(number.toString())
+
+                    if (amount.compareTo(BigDecimal.ZERO) != 0) {
+                        println(row)
+
+                        val entity = row[0] as String
+                        val createdSubTask = createExpenseSubTask(parentTaskId, cardNumber, entity, dueDate, amount)
+                        println("Created subtask - ${createdSubTask.name}")
+                    }
+                }
+
+                return Pair(cardNumber, dueDate)
+            }
+
+        }
+    }
+
+    private fun createExpenseSubTask(parentTaskId: String, cardNumber: String, entity: String, dueDate: String, amount: BigDecimal ): Tasks.Task {
+
+        val paymentCustomFieldId = "4f4cdee5-f89f-46fa-851f-a7dc45ae5543"
+        val typeCustomFieldId = "39fe1993-01ad-4ad6-bbbe-5b63827097be"
+
+        CreateTask(
+            name = "$cardNumber - $entity expense",
+            dueDate = parseLocalDate(dueDate).toDate(),
+            parent = parentTaskId,
+            customFields = listOf(Tasks.Task.CustomField(id = paymentCustomFieldId, name = paymentCustomFieldId, value = amount.toString()),
+                Tasks.Task.CustomField(id = typeCustomFieldId, name = typeCustomFieldId, value = PaymentTask.Type.EXPENSE.ordinal.toString())
+                )
+        ).let {
+            return taskService.createTask(PAYMENT_SCHEDULE_LIST_ID, it)
+        }
     }
 }

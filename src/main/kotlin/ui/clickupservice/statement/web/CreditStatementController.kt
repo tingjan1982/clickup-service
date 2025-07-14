@@ -26,4 +26,12 @@ class CreditStatementController(val service: CreditStatementService) {
         service.extractTransactions(file.inputStream)
         return ApiResponse("Statement 0296 has been imported.")
     }
+
+    @PostMapping("/populateExpenseTasks")
+    fun populateExpenseTasks(): ApiResponse {
+
+        service.populateExpenseTasks().let { (cardNumber, dueDate) ->
+            return ApiResponse("[Card $cardNumber due on $dueDate] Expense tasks have been updated")
+        }
+    }
 }

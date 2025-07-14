@@ -38,4 +38,10 @@ class CreditStatementServiceTest(@Autowired val service: CreditStatementService)
             println("Result is $it")
         }
     }
+
+    @Test
+    fun populateExpenseTasks() {
+
+        service.populateExpenseTasks()
+    }
 }

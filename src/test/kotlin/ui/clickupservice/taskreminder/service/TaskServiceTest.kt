@@ -30,4 +30,14 @@ class TaskServiceTest(@Autowired val service: TaskService) {
             println("${it.name} ${it.id} ${it.toTagString()}")
         }
     }
+
+    @Test
+    fun getAndDeleteCard1212Subtasks() {
+
+        service.getTaskById("86czj3x4c").let { it ->
+            println(it)
+
+            service.deleteSubTasks(it.id)
+        }
+    }
 }
