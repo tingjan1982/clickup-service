@@ -1,7 +1,6 @@
 package ui.clickupservice.taskreminder.service
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import ui.clickupservice.emailservice.EmailService
@@ -11,12 +10,10 @@ import ui.clickupservice.taskreminder.data.TenantTask
 import java.math.BigDecimal
 import java.time.LocalDate
 
+private val logger = KotlinLogging.logger {}
+
 @Service
 class TenantService(val taskService: TaskService, val leasingService: LeasingService, val emailService: EmailService) {
-
-    companion object {
-        val LOGGER: Logger = LoggerFactory.getLogger(ScheduledTaskService::class.java)
-    }
 
     @Scheduled(cron = "0 0 0 L * *")
     fun updateTenantsInRentReview() {
@@ -76,7 +73,7 @@ class TenantService(val taskService: TaskService, val leasingService: LeasingSer
 
                 if (newRent == BigDecimal.ZERO) {
                     newRent = try {
-                        LOGGER.info("${it.name} - reviewing anniversary rent")
+                        logger.info {"${it.name} - reviewing anniversary rent" }
 
                         when (t.reviewType) {
                             TenantTask.ReviewType.CPI -> leasingService.calculateCpiRent(t.rent, t.anniversaryDate).let { cpiRent ->
@@ -97,7 +94,7 @@ class TenantService(val taskService: TaskService, val leasingService: LeasingSer
                         }
 
                     } catch (e: Exception) {
-                        LOGGER.error(e.message, e)
+                        logger.error(e.message, e)
                         BigDecimal.ZERO
                     }
                 }

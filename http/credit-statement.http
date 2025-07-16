@@ -1,4 +1,4 @@
-### GET request to example server
+### Populate expense tasks
 POST http://localhost:8080/statements/populateExpenseTasks
 
 ###

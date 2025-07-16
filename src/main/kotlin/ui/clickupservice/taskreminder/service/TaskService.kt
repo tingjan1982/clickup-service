@@ -2,8 +2,7 @@ package ui.clickupservice.taskreminder.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
@@ -22,6 +21,8 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.stream.Collectors
 
+private val logger = KotlinLogging.logger {}
+
 /**
  * Pretty print JSON reference: https://www.baeldung.com/java-json-pretty-print
  */
@@ -35,8 +36,6 @@ class TaskService(
         const val PAYMENT_SCHEDULE_LIST_ID = "900303019042"
         const val TENANCY_SCHEDULE_LIST_ID = "900302094609"
         const val LOAN_SCHEDULE_LIST_ID = "900300072412"
-
-        val LOGGER: Logger = LoggerFactory.getLogger(TaskService::class.java)
     }
 
     fun getLoanTasks(): List<LoanTask> {
@@ -105,7 +104,7 @@ class TaskService(
 
     fun deleteSubTasks(taskId: String) {
 
-        this.getTaskById(taskId).let { t->
+        this.getTaskById(taskId).let { t ->
             t.subtasks.forEach {
                 println("Deleting ${it.name}")
                 this.deleteTaskById(it.id)
@@ -126,13 +125,13 @@ class TaskService(
     }
 
     fun updateTaskStatus(task: Tasks.Task, status: String): Tasks.Task {
-        LOGGER.info("${task.name} - updating status to ${status.uppercase()}")
+        logger.info { "${task.name} - updating status to ${status.uppercase()}" }
 
         return updateTask(task, mapOf("status" to status))
     }
 
     fun updateTask(task: Tasks.Task, payload: Map<String, String>): Tasks.Task {
-        LOGGER.info("${task.name} - updating task using $payload")
+        logger.info { "${task.name} - updating task using $payload" }
 
         val request = requestHelper.putRequest("api/v2/task/${task.id}", payload)
         val httpClient = HttpClient.newBuilder().build()
@@ -142,9 +141,7 @@ class TaskService(
                 throw BusinessException("Problem updating task in ClickUp: ${it.body()}")
             }
 
-            return objectMapper.readValue<Tasks.Task>(it.body()).also {
-                LOGGER.info("success")
-            }
+            return objectMapper.readValue<Tasks.Task>(it.body())
         }
     }
 

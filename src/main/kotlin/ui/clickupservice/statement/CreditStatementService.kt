@@ -34,7 +34,7 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
 
     }
 
-    fun extractTransactions(statement: InputStream) {
+    fun extractTransactions(statement: InputStream): String {
 
         PdfDocument(PdfReader(statement)).use { pdfDoc ->
             val pageCount = pdfDoc.numberOfPages
@@ -75,6 +75,8 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
                     }
                 }
             }
+
+            return account
         }
     }
 

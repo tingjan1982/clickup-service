@@ -1,7 +1,6 @@
 package ui.clickupservice.taskreminder.service
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import ui.clickupservice.emailservice.EmailService
@@ -13,12 +12,10 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.*
 
+private val logger = KotlinLogging.logger {}
+
 @Service
 class ScheduledTaskService(val taskService: TaskService, val emailService: EmailService, val taskConfigProperties: TaskConfigProperties) {
-
-    companion object {
-        val LOGGER: Logger = LoggerFactory.getLogger(ScheduledTaskService::class.java)
-    }
 
     @Scheduled(cron = "0 0 9 1W * TUE")
     fun sendTenantOptionPeriod(): String {
@@ -66,7 +63,7 @@ class ScheduledTaskService(val taskService: TaskService, val emailService: Email
      */
     @Scheduled(cron = "0 0 9 * * TUE")
     fun sendPaymentReminder(): String {
-        LOGGER.info("Sending task reminder at ${Date()}")
+        logger.info { "Sending task reminder at ${Date()}" }
 
         val tasksGroupedByStatus = getExpenseTasks()
 

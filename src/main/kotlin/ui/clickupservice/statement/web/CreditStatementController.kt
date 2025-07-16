@@ -12,19 +12,12 @@ import ui.clickupservice.statement.CreditStatementService
 @RequestMapping("/statements")
 class CreditStatementController(val service: CreditStatementService) {
 
-    @PostMapping("/card1212")
-    fun importCard1212(@RequestParam("file") file: MultipartFile): ApiResponse {
-
-        service.extractTransactions(file.inputStream)
-        return ApiResponse("Statement 1212 has been imported.")
-
-    }
-
-    @PostMapping("/card0296")
+    @PostMapping("/import")
     fun importCard0296(@RequestParam("file") file: MultipartFile): ApiResponse {
 
-        service.extractTransactions(file.inputStream)
-        return ApiResponse("Statement 0296 has been imported.")
+        service.extractTransactions(file.inputStream).let {
+            return ApiResponse("Statement $it has been imported.")
+        }
     }
 
     @PostMapping("/populateExpenseTasks")
