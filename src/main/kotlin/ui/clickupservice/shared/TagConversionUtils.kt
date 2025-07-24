@@ -17,7 +17,8 @@ object TagConversionUtils {
         "bab" to "BAB",
         "lpjp" to "LPJP",
         "personal" to "PER",
-        "faircloth" to "CFC"
+        "faircloth" to "CFC",
+        "cfc" to "CFC"
     )
 
     fun convertTag(tag: String): String {
