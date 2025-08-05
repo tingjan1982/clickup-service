@@ -19,6 +19,7 @@ class BankExportService {
             "602950" to "CF3",
             "653889" to "CF6",
             "675092" to "CF7",
+            "522619" to "CFC",
             "581985" to "LPJP",
             "297781" to "PHKA",
             "291419" to "PHKD",
