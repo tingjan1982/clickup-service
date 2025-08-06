@@ -9,5 +9,6 @@ data class CreateTask(val name: String,
                       @JsonProperty(value = "due_date_time")
                       val dueDateTime: Boolean = true,
                       val parent: String,
+                      val tags: List<String>,
                       @JsonProperty("custom_fields")
                       val customFields: List<Tasks.Task.CustomField>)

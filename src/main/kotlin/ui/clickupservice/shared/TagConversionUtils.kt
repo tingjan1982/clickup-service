@@ -21,7 +21,13 @@ object TagConversionUtils {
         "cfc" to "CFC"
     )
 
+    private val REVERSE_TAGS_MAP: Map<String, String> = TAGS_MAP.entries.associate { (k, v) -> v to k }
+
     fun convertTag(tag: String): String {
         return TAGS_MAP[tag] ?: throw Exception("tag is not found: $tag")
+    }
+
+    fun reverseLookupTag(entity: String): String {
+        return REVERSE_TAGS_MAP[entity] ?: throw Exception("entity is not found: $entity")
     }
 }

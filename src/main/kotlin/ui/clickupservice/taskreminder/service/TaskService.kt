@@ -161,6 +161,14 @@ class TaskService(
         }
     }
 
+    fun getCardTasks(): List<PaymentTask> {
+
+        val params = mapOf("tags[0]" to "shared")
+
+        return getTaskRequest(PAYMENT_SCHEDULE_LIST_ID, params).tasks.map {
+            return@map PaymentTask.toPaymentTask(it)
+        }
+    }
 
     fun getUpcomingAndOverdueTasks(): List<PaymentTask> {
 

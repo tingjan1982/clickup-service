@@ -7,6 +7,7 @@ import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor
 import com.itextpdf.kernel.pdf.canvas.parser.listener.LocationTextExtractionStrategy
 import org.springframework.stereotype.Service
 import ui.clickupservice.shared.GoogleApiUtils
+import ui.clickupservice.shared.TagConversionUtils
 import ui.clickupservice.shared.exception.BusinessException
 import ui.clickupservice.shared.extension.Extensions
 import ui.clickupservice.shared.extension.Extensions.Companion.parseLocalDate
@@ -159,12 +160,7 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
                 it.next()
                 it.next()
 
-                val parentTaskId = when (cardNumber) {
-                    "1212" -> "86czj3x4c"
-                    "0296" -> "86czj3x4y"
-                    else -> throw BusinessException("Card number is not recognised: $cardNumber")
-                }
-                taskService.deleteSubTasks(parentTaskId)
+                val parentTaskId = deleteCardSubTasks(cardNumber)
 
                 it.forEach { row ->
                     val number = NumberFormat.getCurrencyInstance(Locale.US).parse(row[5] as String)
@@ -185,6 +181,16 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
         }
     }
 
+    private fun deleteCardSubTasks(cardNumber: String): String {
+
+        taskService.getCardTasks().first { it.task.name.contains(cardNumber) }
+            .let {
+                taskService.deleteSubTasks(it.task.id)
+
+                return it.task.id
+            }
+    }
+
     private fun createExpenseSubTask(parentTaskId: String, cardNumber: String, entity: String, dueDate: String, amount: BigDecimal ): Tasks.Task {
 
         val paymentCustomFieldId = "4f4cdee5-f89f-46fa-851f-a7dc45ae5543"
@@ -194,6 +200,7 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
             name = "$cardNumber - $entity expense",
             dueDate = parseLocalDate(dueDate).toDate(),
             parent = parentTaskId,
+            tags = listOf(TagConversionUtils.reverseLookupTag(entity)),
             customFields = listOf(Tasks.Task.CustomField(id = paymentCustomFieldId, name = paymentCustomFieldId, value = amount.toString()),
                 Tasks.Task.CustomField(id = typeCustomFieldId, name = typeCustomFieldId, value = PaymentTask.Type.EXPENSE.ordinal.toString())
                 )

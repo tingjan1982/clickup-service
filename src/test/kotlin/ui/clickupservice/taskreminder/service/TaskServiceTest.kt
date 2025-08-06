@@ -32,6 +32,15 @@ class TaskServiceTest(@Autowired val service: TaskService) {
     }
 
     @Test
+    fun getCardTasks() {
+
+        service.getCardTasks().forEach { t ->
+            println(t)
+        }
+    }
+
+
+    @Test
     fun getAndDeleteCard1212Subtasks() {
 
         service.getTaskById("86czj3x4c").let { it ->
