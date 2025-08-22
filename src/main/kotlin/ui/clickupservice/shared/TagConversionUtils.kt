@@ -16,6 +16,7 @@ object TagConversionUtils {
         "super" to "SUPER",
         "bab" to "BAB",
         "lpjp" to "LPJP",
+        "lpjp-carpark" to "LPJP",
         "personal" to "PER",
         "faircloth" to "CFC",
         "cfc" to "CFC"
