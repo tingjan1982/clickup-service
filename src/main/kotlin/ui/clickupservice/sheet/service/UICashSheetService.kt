@@ -76,7 +76,9 @@ class UICashSheetService(
                         bankAccounts["PHKD"]?.balance.toString(),
                         bankAccounts["RBM"]?.balance.toString(),
                         bankAccounts["RBHP"]?.balance.toString(),
-                        bankAccounts["UI"]?.balance.toString()
+                        bankAccounts["UI"]?.balance.toString(),
+                        bankAccounts["UI-SAVING"]?.balance.toString(),
+                        bankAccounts["PER"]?.balance.toString()
                     )
                 )
             )
