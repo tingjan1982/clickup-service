@@ -49,12 +49,12 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
 
                 Regex("Due Date\\n(\\d{2} \\w{3} \\d{2})").find(text)?.let {
                     dueDate = LocalDate.parse(it.groupValues[1].trim(), formatter)
-                    println(dueDate)
+                    println("Due date: $dueDate")
                 }
 
                 Regex("Account Number\\n\\d{4} \\d{4} \\d{4} (\\d{4})").find(text)?.let {
                     account = it.groupValues[1]
-                    println(account)
+                    println("Account: $account")
                 }
 
                 if (text.contains("Date of")) {
@@ -64,9 +64,11 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
                         throw BusinessException("This statement [$account, $dueDate] has already been uploaded before")
                     }
 
-                    text.lines().forEach { line ->
+                    val lines = postProcessingTransactionLines(text)
+
+                    lines.forEach { line ->
+                        println("<$line>")
                         Regex("^(\\d{2} \\w{3} \\d{2})(.+\\s+)(\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)( -)?").find(line)?.let {
-                            println(line)
 
                             val transaction = createTransaction(it, dueDate, account)
                             println(transaction)
@@ -77,8 +79,31 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
                 }
             }
 
+            addUploadedStatementRecord(account, dueDate)
+
             return account
         }
+    }
+
+    private fun postProcessingTransactionLines(text: String): MutableList<String> {
+
+        val lines = text.lines().toMutableList()
+        var indexToRemove = 0
+
+        for ((idx, line) in lines.withIndex()) {
+            if (Regex("(^\\s+(\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)( -)?)").matches(line)) {
+                println("Found straggler amount on a separate line, attempt merging with previous line: ${lines[idx - 1]}, $line")
+                lines[idx - 1] = lines[idx - 1].trim('\n', '\r') + line
+                println("Merged result: ${lines[idx - 1]}")
+                indexToRemove = idx
+            }
+        }
+
+        if (indexToRemove != 0) {
+            lines.removeAt(indexToRemove)
+        }
+
+        return lines
     }
 
     fun isStatementUploadedBefore(account: String, dueDate: LocalDate): Boolean {
@@ -101,6 +126,26 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
         }
 
         return false
+    }
+
+    fun addUploadedStatementRecord(account: String, dueDate: LocalDate) {
+
+        val service = googleApiUtils.getSheetService()
+
+        val body = ValueRange().setValues(
+            listOf(
+                listOf(
+                    account, dueDate.toDateFormat()
+                )
+            )
+        )
+
+        val result = service.spreadsheets().values().append(COST_ANALYSIS_SHEET_ID, "Credit Card - Summary!ProcessedStatement", body)
+            .setValueInputOption("USER_ENTERED")
+            .setInsertDataOption("INSERT_ROWS")
+            .execute()
+
+        println("Added statement record (${result.updates.updatedRows})")
     }
 
     fun writeTransaction(transaction: Transaction) {
@@ -191,7 +236,7 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
             }
     }
 
-    private fun createExpenseSubTask(parentTaskId: String, cardNumber: String, entity: String, dueDate: String, amount: BigDecimal ): Tasks.Task {
+    private fun createExpenseSubTask(parentTaskId: String, cardNumber: String, entity: String, dueDate: String, amount: BigDecimal): Tasks.Task {
 
         val paymentCustomFieldId = "4f4cdee5-f89f-46fa-851f-a7dc45ae5543"
         val typeCustomFieldId = "39fe1993-01ad-4ad6-bbbe-5b63827097be"
@@ -201,9 +246,10 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
             dueDate = parseLocalDate(dueDate).toDate(),
             parent = parentTaskId,
             tags = listOf(TagConversionUtils.reverseLookupTag(entity)),
-            customFields = listOf(Tasks.Task.CustomField(id = paymentCustomFieldId, name = paymentCustomFieldId, value = amount.toString()),
+            customFields = listOf(
+                Tasks.Task.CustomField(id = paymentCustomFieldId, name = paymentCustomFieldId, value = amount.toString()),
                 Tasks.Task.CustomField(id = typeCustomFieldId, name = typeCustomFieldId, value = PaymentTask.Type.EXPENSE.ordinal.toString())
-                )
+            )
         ).let {
             return taskService.createTask(PAYMENT_SCHEDULE_LIST_ID, it)
         }

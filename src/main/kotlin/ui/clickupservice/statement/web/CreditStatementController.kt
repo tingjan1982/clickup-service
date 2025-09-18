@@ -13,7 +13,7 @@ import ui.clickupservice.statement.CreditStatementService
 class CreditStatementController(val service: CreditStatementService) {
 
     @PostMapping("/import")
-    fun importCard0296(@RequestParam("file") file: MultipartFile): ApiResponse {
+    fun importCard(@RequestParam("file") file: MultipartFile): ApiResponse {
 
         service.extractTransactions(file.inputStream).let {
             return ApiResponse("Statement $it has been imported.")
