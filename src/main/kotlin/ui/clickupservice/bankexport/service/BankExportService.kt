@@ -23,6 +23,7 @@ class BankExportService {
             "581985" to "LPJP",
             "297781" to "PHKA",
             "291419" to "PHKD",
+            "209163" to "PTD",
             "706231" to "RBM",
             "566910" to "RBHP",
             "728262" to "UI-SAVING",

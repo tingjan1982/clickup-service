@@ -11,6 +11,7 @@ object TagConversionUtils {
         "cf7-townsville" to "CF7",
         "phkd" to "PHKD",
         "phka" to "PHKA",
+        "ptd" to "PTD",
         "rbm" to "RBM",
         "rbhp" to "RBHP",
         "super" to "SUPER",
