@@ -47,7 +47,7 @@ class TaskService(
 
         return getTaskRequest(LOAN_SCHEDULE_LIST_ID, params).tasks.map { it ->
             val loan = it.customFields.first { it.name == "Loan" }.toBigDecimal()
-            val paymentField = it.customFields.first { it.name == "Payment" }.toBigDecimal()
+            val paymentField = it.customFields.first { it.name == "LoanPayment" }.toBigDecimal()
 
             return@map LoanTask(it, loan, paymentField)
         }
