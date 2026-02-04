@@ -12,7 +12,7 @@ class ExtractInvoiceServiceTest(@Autowired val service: ExtractInvoiceService) {
     @Test
     fun extractInvoiceFromPDF() {
 
-        val file = File("${System.getProperty("user.home")}/Downloads/Invoice no. 39586 - RBG Lawyers Tax Invoice less trust funds - email.pdf")
+        val file = File("${System.getProperty("user.home")}/Downloads/Invoice no. 41049 - RBG Lawyers Tax Invoice - email.pdf")
 
         service.extractInvoiceFromPDF(file).also {
             println(it)

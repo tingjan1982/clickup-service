@@ -25,7 +25,8 @@ class ExtractInvoiceService {
             "Pacific Hong Kong Development Limited" to "PHKD",
             "Raby Bay Harbour Properties Pty Ltd" to "RBHP",
             "Raby Bay Marina Pty Ltd" to "RBM",
-            "UI International Pty Ltd" to "UI"
+            "UI International Pty Ltd" to "UI",
+            "U. I. International Pty. Ltd." to "UI"
         )
     }
 
