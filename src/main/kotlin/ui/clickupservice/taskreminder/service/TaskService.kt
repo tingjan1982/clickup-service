@@ -44,6 +44,7 @@ class TaskService(
         params["archived"] = "false"
         params["order_by"] = "due_date"
         params["reverse"] = "true"
+        params["subtasks"] = "true"
 
         return getTaskRequest(LOAN_SCHEDULE_LIST_ID, params).tasks.map { it ->
             val loan = it.customFields.first { it.name == "Loan" }.toBigDecimal()
@@ -198,9 +199,21 @@ class TaskService(
         params["order_by"] = "due_date"
         params["reverse"] = "true"
         params["subtasks"] = "true"
-        //params["statuses[0]"] = "payment plan"
         params["statuses[0]"] = "scheduled"
         params["statuses[1]"] = "paid"
+
+        return getTaskRequest(PAYMENT_SCHEDULE_LIST_ID, params).tasks.map {
+            return@map PaymentTask.toPaymentTask(it)
+        }
+    }
+
+    fun getPaymentPlanPaymentTasks(): List<PaymentTask> {
+
+        val params = HashMap<String, String>()
+        params["archived"] = "false"
+        params["order_by"] = "due_date"
+        params["reverse"] = "true"
+        params["statuses[0]"] = "payment plan"
 
         return getTaskRequest(PAYMENT_SCHEDULE_LIST_ID, params).tasks.map {
             return@map PaymentTask.toPaymentTask(it)

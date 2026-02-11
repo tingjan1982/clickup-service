@@ -23,6 +23,20 @@ class TaskServiceTest(@Autowired val service: TaskService) {
     }
 
     @Test
+    fun getPaymentPlanPaymentTasks() {
+
+        service.getPaymentPlanPaymentTasks().also { println("Total: ${it.size}") }
+            .forEach { t ->
+                val it = t.task
+                println("${it.name} ${it.id} ${it.toTagString()}")
+
+                service.getTaskById(it.id).let { task ->
+                    println(task.subtasks.size)
+                }
+            }
+    }
+
+    @Test
     fun getLoanTasks() {
 
         service.getLoanTasks().forEach { t ->
@@ -38,7 +52,6 @@ class TaskServiceTest(@Autowired val service: TaskService) {
             println(t)
         }
     }
-
 
     @Test
     fun getAndDeleteCard1212Subtasks() {
