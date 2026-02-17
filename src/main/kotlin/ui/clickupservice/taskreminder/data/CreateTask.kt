@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.util.*
 
 data class CreateTask(val name: String,
-                      @JsonProperty(value = "due_date")
+                      @param:JsonProperty(value = "due_date")
                       val dueDate: Date,
-                      @JsonProperty(value = "due_date_time")
+                      @param:JsonProperty(value = "due_date_time")
                       val dueDateTime: Boolean = true,
                       val parent: String,
                       val tags: List<String>,
-                      @JsonProperty("custom_fields")
+                      @param:JsonProperty("custom_fields")
                       val customFields: List<Tasks.Task.CustomField>)

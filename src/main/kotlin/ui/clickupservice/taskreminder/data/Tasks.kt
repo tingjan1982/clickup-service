@@ -13,18 +13,18 @@ data class Tasks(var tasks: List<Task>) {
     data class Task(
         val id: String,
         val name: String,
-        @JsonProperty(value = "start_date", required = false)
-        @JsonSetter(nulls = Nulls.SKIP)
+        @param:JsonProperty(value = "start_date", required = false)
+        @param:JsonSetter(nulls = Nulls.SKIP)
         var startDate: Date = Date(),
-        @JsonProperty(value = "due_date", required = false)
-        @JsonSetter(nulls = Nulls.SKIP)
+        @param:JsonProperty(value = "due_date", required = false)
+        @param:JsonSetter(nulls = Nulls.SKIP)
         //@JsonDeserialize(using = LocalDateDeserializer::class)
         var dueDate: Date = Date(),
         var taskStatus: String?,
         var tags: List<Tag>,
-        @JsonProperty("custom_fields")
+        @param:JsonProperty("custom_fields")
         var customFields: List<CustomField>,
-        @JsonProperty("subtasks")
+        @param:JsonProperty("subtasks")
         var subtasks: List<Subtask> = listOf()
     ) {
         fun toTagString(): String {
@@ -38,7 +38,7 @@ data class Tasks(var tasks: List<Task>) {
         data class CustomField(
             val id: String,
             val name: String,
-            @JsonProperty(required = false)
+            @param:JsonProperty(required = false)
             val value: String?
         ) {
 
