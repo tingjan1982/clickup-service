@@ -10,6 +10,7 @@ class ConfigProperties {
     lateinit var endpoint: String
     lateinit var authenticationToken: String
     lateinit var sendgridApiKey: String
+    lateinit var brevoApiKey: String
     lateinit var notificationEmail: String
     lateinit var googleCredentials: String
 }

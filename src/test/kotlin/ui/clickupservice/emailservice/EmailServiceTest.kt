@@ -15,4 +15,13 @@ class EmailServiceTest(@Autowired val emailService: EmailService) {
             assertEquals(202, it.statusCode)
         }
     }
+
+    @Test
+    fun sendPlainEmailViaBrevo() {
+
+        emailService.sendBrevoEmail("Sendgrid Test", "Brevo email success").let {
+            //assertEquals(202, it.statusCode)
+            println(it)
+        }
+    }
 }

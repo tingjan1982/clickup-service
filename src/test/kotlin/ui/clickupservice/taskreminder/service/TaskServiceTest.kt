@@ -23,6 +23,16 @@ class TaskServiceTest(@Autowired val service: TaskService) {
     }
 
     @Test
+    fun getPaidPaymentTasks() {
+
+        service.getPaidPaymentTasks().also { println("Total paid tasks: ${it.size}") }
+            .forEach { t ->
+                val it = t.task
+                println("${it.name} ${it.id} ${it.toTagString()}")
+            }
+    }
+
+    @Test
     fun getPaymentPlanPaymentTasks() {
 
         service.getPaymentPlanPaymentTasks().also { println("Total: ${it.size}") }

@@ -220,6 +220,27 @@ class TaskService(
         }
     }
 
+    fun getPaidPaymentTasks(): List<PaymentTask> {
+
+        val params = HashMap<String, String>()
+        params["archived"] = "false"
+        params["order_by"] = "due_date"
+        params["reverse"] = "true"
+        params["subtasks"] = "true"
+        params["statuses[0]"] = "paid"
+
+        return getTaskRequest(PAYMENT_SCHEDULE_LIST_ID, params).tasks.map {
+            return@map PaymentTask.toPaymentTask(it)
+        }
+    }
+
+    fun completePaidTasks(): List<Tasks.Task> {
+
+        return getPaidPaymentTasks().map {
+            return@map updateTaskStatus(it.task, "complete")
+        }
+    }
+
     fun getTaskRequest(listId: String, params: Map<String, String>): Tasks {
         val request = requestHelper.getRequest("api/v2/list/$listId/task", params)
 
