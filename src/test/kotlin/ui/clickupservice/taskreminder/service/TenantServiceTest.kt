@@ -8,6 +8,12 @@ import org.springframework.boot.test.context.SpringBootTest
 class TenantServiceTest(@Autowired val tenantService: TenantService) {
 
     @Test
+    fun sendRentReviewReminder() {
+
+        tenantService.sendRentReviewReminder()
+    }
+
+    @Test
     fun updateTenantsInRentReview() {
 
         tenantService.updateTenantsInRentReview()

@@ -15,6 +15,35 @@ private val logger = KotlinLogging.logger {}
 @Service
 class TenantService(val taskService: TaskService, val leasingService: LeasingService, val emailService: EmailService) {
 
+    fun sendRentReviewReminder() {
+
+        leasingService.getLeases()
+            .filter { it.rentReviewDate != null }
+            .filter { it.rentReviewDate!!.isBefore(LocalDate.now()) }
+            .let {
+                val currentYear = LocalDate.now().year
+
+                val emailContent = buildString {
+                    appendLine("Tenant(s) that requires rent review.")
+                    appendLine()
+                    it.forEach { lease ->
+                        appendLine("${lease.tenant} - anniversary on ${lease.rentReviewDate!!.toDateFormat()} Review Type (${lease.reviewType})")
+                        appendLine()
+
+                        println(lease.rentReviews)
+
+                        lease.rentReviews.findLast{ r -> r.year == currentYear }?.let { r ->
+                            appendLine("New Rent: ${r.newRent}")
+                        }
+                    }
+                }
+
+                println(emailContent)
+
+                emailService.sendBrevoEmail("Rent Review Reminder", emailContent)
+            }
+    }
+
     @Scheduled(cron = "0 0 0 L * *")
     fun updateTenantsInRentReview() {
         val lastQuarter = LocalDate.now().getLastQuarter()
@@ -73,7 +102,7 @@ class TenantService(val taskService: TaskService, val leasingService: LeasingSer
 
                 if (newRent == BigDecimal.ZERO) {
                     newRent = try {
-                        logger.info {"${it.name} - reviewing anniversary rent" }
+                        logger.info { "${it.name} - reviewing anniversary rent" }
 
                         when (t.reviewType) {
                             TenantTask.ReviewType.CPI -> leasingService.calculateCpiRent(t.rent, t.anniversaryDate).let { cpiRent ->

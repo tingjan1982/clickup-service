@@ -2,13 +2,30 @@ package ui.clickupservice.leasing.service
 
 import org.springframework.stereotype.Service
 import ui.clickupservice.leasing.data.LeasingConfigProperties
+import ui.clickupservice.notion.data.Lease
+import ui.clickupservice.notion.data.Lease.Location
+import ui.clickupservice.notion.service.NotionService
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.Month
 
 
 @Service
-class LeasingService(val leasingConfigProperties: LeasingConfigProperties) {
+class LeasingService(val notionService: NotionService, val leasingConfigProperties: LeasingConfigProperties) {
+
+    fun getLeases(location: Location = Location.HARBOUR): List<Lease> {
+
+        val rentReviews = notionService.readRentReview()
+
+        return notionService.readLeases(location).map {
+
+            rentReviews[it.id]?.let { reviews ->
+                it.rentReviews.addAll(reviews)
+            }
+
+            return@map it
+        }
+    }
 
     fun calculatePercentageRent(rent: BigDecimal, percentage: BigDecimal): BigDecimal {
 
