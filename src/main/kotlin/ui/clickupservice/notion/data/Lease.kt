@@ -8,9 +8,9 @@ data class Lease(
     val location: Location,
     val status: String,
     val tenant: String,
-    val leaseDate: LocalDate?,
-    val rentReviewDate: LocalDate?,
-    val startingRent: BigDecimal?,
+    val leaseDate: LocalDate = LocalDate.now(),
+    val rentReviewDate: LocalDate = LocalDate.now(),
+    val startingRent: BigDecimal = BigDecimal.ZERO,
     val reviewType: String,
     val rentReviews: MutableList<RentReview> = mutableListOf()
 ) {

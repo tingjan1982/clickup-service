@@ -92,18 +92,22 @@ class NotionService(
     fun readRentReview(): Map<String, List<RentReview>> {
         val response = queryDatabase(RENT_REVIEW_DATABASE_ID)
 
-        return response.results.map { page ->
+        val rentReviews = response.results.map { page ->
             val properties = page.properties
             val yearProperty = findProperty(properties, "Year")
             val leasesProperty = findProperty(properties, "Leases")
             val newRentProperty = findProperty(properties, "New Rent")
+            val adoptedCpiProperty = findProperty(properties, "Adopted CPI")
 
             RentReview(
                 year = extractYear(yearProperty),
                 leases = extractRelation(leasesProperty),
-                newRent = extractNumber(newRentProperty)
+                newRent = extractNumber(newRentProperty) ?: BigDecimal.ZERO,
+                adoptedCPI = extractNumber(adoptedCpiProperty) ?: BigDecimal.ZERO
             )
-        }.groupBy { it.leases }
+        }
+
+        return rentReviews.groupBy { it.leases }
     }
 
     fun readLeases(location: Lease.Location): List<Lease> {
@@ -125,9 +129,9 @@ class NotionService(
                 location = extractLocation(locationProperty),
                 status = extractPropertyText(statusProperty),
                 tenant = extractPropertyText(tenantProperty),
-                leaseDate = extractDate(leaseDateProperty),
-                rentReviewDate = extractDate(rentReviewDateProperty),
-                startingRent = extractNumber(startingRentProperty),
+                leaseDate = extractDate(leaseDateProperty) ?: LocalDate.now(),
+                rentReviewDate = extractDate(rentReviewDateProperty) ?: LocalDate.now(),
+                startingRent = extractNumber(startingRentProperty) ?: BigDecimal.ZERO,
                 reviewType = extractPropertyText(reviewType)
             )
         }
@@ -148,10 +152,7 @@ class NotionService(
         )
     }
 
-    private fun extractPropertyText(property: NotionProperty?): String {
-        if (property == null) {
-            return ""
-        }
+    private fun extractPropertyText(property: NotionProperty): String {
 
         if (property.title.isNotEmpty()) {
             return property.title.joinToString("") { it.plainText.orEmpty() }.trim()
@@ -163,31 +164,44 @@ class NotionService(
 
         property.status?.name?.takeIf { it.isNotBlank() }?.let { return it }
         property.select?.name?.takeIf { it.isNotBlank() }?.let { return it }
+        property.rollup?.let { rollup ->
+            when (rollup.type) {
+                "number" -> rollup.number?.toPlainString()?.let { return it }
+                "date" -> rollup.date?.start?.let { return it }
+                "array" -> if (rollup.array.isNotEmpty()) {
+                    return rollup.array.joinToString(",") { extractPropertyText(it) }.trim()
+                }
+            }
+        }
         property.name?.takeIf { it.isNotBlank() }?.let { return it }
 
         return ""
     }
 
-    private fun extractNumber(property: NotionProperty?): BigDecimal? {
-        property?.number?.let { return it }
-        property?.formula?.number?.let { return it }
-        property?.formula?.string?.let { parseBigDecimal(it)?.let { parsed -> return parsed } }
+    private fun extractNumber(property: NotionProperty): BigDecimal? {
+
+        property.number?.let { return it }
+        property.formula?.number?.let { return it }
+        property.rollup?.number?.let { return it }
+        property.formula?.string?.let { parseBigDecimal(it)?.let { parsed -> return parsed } }
+        property.rollup?.array?.forEach { rollupProperty ->
+            extractNumber(rollupProperty)?.let { return it }
+        }
 
         return parseBigDecimal(extractPropertyText(property))
     }
 
-    private fun extractYear(property: NotionProperty?): Int? {
-        property?.number?.toInt()?.let { return it }
-        property?.formula?.number?.toInt()?.let { return it }
+    private fun extractYear(property: NotionProperty): Int {
+
+        property.number?.toInt()?.let { return it }
+        property.formula?.number?.toInt()?.let { return it }
+        property.rollup?.number?.toInt()?.let { return it }
         extractDate(property)?.year?.let { return it }
 
-        return extractPropertyText(property).trim().toIntOrNull()
+        return extractPropertyText(property).trim().toInt()
     }
 
-    private fun extractRelation(property: NotionProperty?): String {
-        if (property == null) {
-            return ""
-        }
+    private fun extractRelation(property: NotionProperty): String {
 
         if (property.relation.isNotEmpty()) {
             return property.relation.joinToString(",") { it.id }.trim()
@@ -196,14 +210,18 @@ class NotionService(
         return extractPropertyText(property)
     }
 
-    private fun extractDate(property: NotionProperty?): LocalDate? {
-        return extractLocalDate(property?.date?.start)
-            ?: extractLocalDate(property?.formula?.date?.start)
-            ?: extractLocalDate(property?.formula?.string)
+    private fun extractDate(property: NotionProperty): LocalDate? {
+
+        return extractLocalDate(property.date?.start)
+            ?: extractLocalDate(property.formula?.date?.start)
+            ?: extractLocalDate(property.rollup?.date?.start)
+            ?: extractLocalDate(property.formula?.string)
+            ?: extractLocalDate(property.rollup?.array?.asSequence()?.map { extractPropertyText(it) }?.firstOrNull { it.isNotBlank() })
             ?: extractLocalDate(extractPropertyText(property))
     }
 
-    private fun extractLocation(property: NotionProperty?): Lease.Location {
+    private fun extractLocation(property: NotionProperty): Lease.Location {
+
         val locationString = extractPropertyText(property)
         val normalized = locationString.normalizePropertyKey()
 
@@ -293,6 +311,7 @@ class NotionService(
         val relation: List<NotionRelationValue> = emptyList(),
         val date: NotionDateValue? = null,
         val formula: NotionFormulaValue? = null,
+        val rollup: NotionRollupValue? = null,
         val number: BigDecimal? = null,
         val name: String? = null
     )
@@ -316,6 +335,13 @@ class NotionService(
         val number: BigDecimal? = null,
         val boolean: Boolean? = null,
         val date: NotionDateValue? = null
+    )
+
+    data class NotionRollupValue(
+        val type: String? = null,
+        val number: BigDecimal? = null,
+        val date: NotionDateValue? = null,
+        val array: List<NotionProperty> = emptyList()
     )
 
     data class NotionRelationValue(

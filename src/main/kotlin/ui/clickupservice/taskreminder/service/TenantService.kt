@@ -1,7 +1,6 @@
 package ui.clickupservice.taskreminder.service
 
 import mu.KotlinLogging
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import ui.clickupservice.emailservice.EmailService
 import ui.clickupservice.leasing.service.LeasingService
@@ -15,53 +14,42 @@ private val logger = KotlinLogging.logger {}
 @Service
 class TenantService(val taskService: TaskService, val leasingService: LeasingService, val emailService: EmailService) {
 
-    fun sendRentReviewReminder() {
+    fun sendRentReviewSummary() {
+
+        val currentYear = LocalDate.now().year
 
         leasingService.getLeases()
-            .filter { it.rentReviewDate != null }
-            .filter { it.rentReviewDate!!.isBefore(LocalDate.now()) }
+            .filter { it.rentReviewDate.isBefore(LocalDate.now()) }
             .let {
-                val currentYear = LocalDate.now().year
-
                 val emailContent = buildString {
                     appendLine("Tenant(s) that requires rent review.")
                     appendLine()
                     it.forEach { lease ->
                         appendLine("${lease.tenant} - anniversary on ${lease.rentReviewDate!!.toDateFormat()} Review Type (${lease.reviewType})")
                         appendLine()
+                        append("New Rent: ")
 
-                        println(lease.rentReviews)
-
-                        lease.rentReviews.findLast{ r -> r.year == currentYear }?.let { r ->
-                            appendLine("New Rent: ${r.newRent}")
+                        lease.rentReviews.findLast { r -> r.year == currentYear }?.let { r ->
+                            when (lease.reviewType) {
+                                "PERCENT" -> appendLine("${r.newRent.formatNumber()}+GST")
+                                "CPI" -> {
+                                    if (r.adoptedCPI <= BigDecimal.ZERO) {
+                                        appendLine("Await CPI")
+                                    } else {
+                                        appendLine("${r.newRent.formatNumber()}+GST")
+                                    }
+                                }
+                            }
                         }
+
+                        appendLine()
                     }
                 }
 
-                println(emailContent)
-
-                emailService.sendBrevoEmail("Rent Review Reminder", emailContent)
+                emailService.sendBrevoEmail("Rent Review Summary - $currentYear", emailContent)
             }
     }
 
-    @Scheduled(cron = "0 0 0 L * *")
-    fun updateTenantsInRentReview() {
-        val lastQuarter = LocalDate.now().getLastQuarter()
-
-        taskService.getTenancyScheduleTasks().filter {
-            return@filter it.task.taskStatus == "rent reviewed"
-        }.forEach {
-            val isLastQuarter = it.anniversaryDate.getQuarter() == lastQuarter
-
-            if (isLastQuarter) {
-                taskService.updateTaskStatus(it.task, "lease commenced")
-                taskService.updateCustomField(it.task, "Annual Rent", it.newRent.formatNumber())
-                taskService.updateCustomField(it.task, "New Rent", "")
-            }
-        }
-    }
-
-    @Scheduled(cron = "0 0 8 1 * *")
     fun sendTenantsInRentReview(): String {
 
         val now = LocalDate.now()
