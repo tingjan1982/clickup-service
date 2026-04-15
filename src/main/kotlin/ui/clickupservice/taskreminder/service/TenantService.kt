@@ -4,6 +4,7 @@ import mu.KotlinLogging
 import org.springframework.stereotype.Service
 import ui.clickupservice.emailservice.EmailService
 import ui.clickupservice.leasing.service.LeasingService
+import ui.clickupservice.notion.data.Lease
 import ui.clickupservice.shared.extension.*
 import ui.clickupservice.taskreminder.data.TenantTask
 import java.math.BigDecimal
@@ -14,22 +15,29 @@ private val logger = KotlinLogging.logger {}
 @Service
 class TenantService(val taskService: TaskService, val leasingService: LeasingService, val emailService: EmailService) {
 
-    fun sendRentReviewSummary() {
+    fun sendRentReviewSummary(): List<Lease> {
 
         val currentYear = LocalDate.now().year
 
         leasingService.getLeases()
             .filter { it.rentReviewDate.isBefore(LocalDate.now()) }
-            .let {
+            .map {
+                it.rentReviews.findLast { r -> r.year == currentYear }?.let { rr ->
+                    it.rentReviews.clear()
+                    it.rentReviews.add(rr)
+                }
+
+                return@map it
+            }.let {
                 val emailContent = buildString {
                     appendLine("Tenant(s) that requires rent review.")
                     appendLine()
                     it.forEach { lease ->
-                        appendLine("${lease.tenant} - anniversary on ${lease.rentReviewDate!!.toDateFormat()} Review Type (${lease.reviewType})")
+                        appendLine("${lease.tenant} - anniversary on ${lease.rentReviewDate.toDateFormat()} Review Type (${lease.reviewType})")
                         appendLine()
                         append("New Rent: ")
 
-                        lease.rentReviews.findLast { r -> r.year == currentYear }?.let { r ->
+                        lease.rentReviews.forEach { r ->
                             when (lease.reviewType) {
                                 "PERCENT" -> appendLine("${r.newRent.formatNumber()}+GST")
                                 "CPI" -> {
@@ -46,7 +54,10 @@ class TenantService(val taskService: TaskService, val leasingService: LeasingSer
                     }
                 }
 
+                println(emailContent)
                 emailService.sendBrevoEmail("Rent Review Summary - $currentYear", emailContent)
+
+                return it
             }
     }
 

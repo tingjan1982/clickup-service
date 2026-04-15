@@ -8,12 +8,6 @@ import org.springframework.boot.test.context.SpringBootTest
 class ScheduledTaskServiceTest(@Autowired val scheduledTaskService: ScheduledTaskService) {
 
     @Test
-    fun sendTenantOptionPeriod() {
-
-        scheduledTaskService.sendTenantOptionPeriod()
-    }
-
-    @Test
     fun sendPaymentReminder() {
 
         scheduledTaskService.sendPaymentReminder()

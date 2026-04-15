@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import ui.clickupservice.notion.data.Lease
 import ui.clickupservice.shared.web.ApiResponse
 import ui.clickupservice.taskreminder.service.ScheduledTaskService
 import ui.clickupservice.taskreminder.service.TaskService
@@ -28,15 +29,10 @@ $it
         }
     }
 
-    @GetMapping("/optionPeriod")
-    fun sendTenantOptionPeriod(): String {
+    @GetMapping("/rentReviewSummary")
+    fun sendRentReviewSummary(): List<Lease> {
 
-        scheduledTaskService.sendTenantOptionPeriod().let {
-            return """
-            <pre style="font-family: monospace">
-$it
-            </pre>""".trimIndent()
-        }
+        return tenantService.sendRentReviewSummary()
     }
 
     @GetMapping("/rentReview")

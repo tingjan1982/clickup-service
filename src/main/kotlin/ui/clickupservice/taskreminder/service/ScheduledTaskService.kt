@@ -17,47 +17,6 @@ private val logger = KotlinLogging.logger {}
 @Service
 class ScheduledTaskService(val taskService: TaskService, val emailService: EmailService, val taskConfigProperties: TaskConfigProperties) {
 
-    @Scheduled(cron = "0 0 9 1W * TUE")
-    fun sendTenantOptionPeriod(): String {
-
-        val today = LocalDate.now()
-        val tasks = taskService.getTenancyScheduleTasks().filter {
-            val t = it.task
-
-            if (t.taskStatus == "lease commenced") {
-                val months = ChronoUnit.MONTHS.between(today, t.dueDate.toLocalDate())
-
-                return@filter months <= 6
-            }
-
-            return@filter t.taskStatus == "option period"
-        }.onEach {
-            val t = it.task
-            if (t.taskStatus != "option period") {
-                taskService.updateTaskStatus(t, "option period")
-            }
-        }
-
-        val content = buildString {
-            appendLine("Tenants in Option Period")
-            appendLine()
-            append("${"Tenancy".padEnd(30)} | ${"Due Date".padEnd(12)} | Entity").appendLine()
-            appendLine("".padEnd(70, '-'))
-
-            tasks.forEach {
-                val t = it.task
-                append(t.name.padEnd(30)).append(" | ").append(t.dueDate.toDateFormat().padEnd(12)).append(" | ").append(t.toTagString())
-                    .appendLine()
-            }
-
-            appendLine()
-        }
-
-        println(content)
-        emailService.sendDynamicEmail("Tenants in Option Period", content, mapOf("listId" to TaskService.TENANCY_SCHEDULE_LIST_ID))
-        return content
-    }
-
     /**
      * buildString usage: https://dev.to/pfilaretov42/nice-way-to-build-string-in-kotlin-nm4
      */
