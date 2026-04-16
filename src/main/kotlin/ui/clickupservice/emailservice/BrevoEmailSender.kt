@@ -14,11 +14,12 @@ import java.time.LocalDate
 class BrevoEmailSender(private val configProperties: ConfigProperties) {
     private val objectMapper = jacksonObjectMapper()
 
-    fun sendBrevoEmail(subject: String, contentStr: String): String {
+    fun sendBrevoEmail(subject: String, contentStr: String, recipientEmail: String? = null): String {
+        val toEmail = recipientEmail?.takeIf { it.isNotBlank() } ?: configProperties.notificationEmail
 
         val payload = BrevoEmailRequest(
             sender = BrevoAddress(email = "joelin@rabybayharbour.com", name = "Joe's Reminder"),
-            to = listOf(BrevoAddress(email = configProperties.notificationEmail)),
+            to = listOf(BrevoAddress(email = toEmail)),
             subject = subject,
             textContent = contentStr
         )

@@ -8,9 +8,9 @@ import org.springframework.boot.test.context.SpringBootTest
 class TenantServiceTest(@Autowired val tenantService: TenantService) {
 
     @Test
-    fun sendRentReviewSummary() {
+    fun getRentReviewSummary() {
 
-        tenantService.sendRentReviewSummary()
+        tenantService.getRentReviewSummary()
     }
 
     @Test

@@ -1,9 +1,6 @@
 package ui.clickupservice.taskreminder.web
 
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import ui.clickupservice.notion.data.Lease
 import ui.clickupservice.shared.web.ApiResponse
 import ui.clickupservice.taskreminder.service.ScheduledTaskService
@@ -30,9 +27,15 @@ $it
     }
 
     @GetMapping("/rentReviewSummary")
-    fun sendRentReviewSummary(): List<Lease> {
+    fun getRentReviewSummary(): List<Lease> {
 
-        return tenantService.sendRentReviewSummary()
+        return tenantService.getRentReviewSummary()
+    }
+
+    @PostMapping("/rentReviewSummary/email")
+    fun sendRentReviewSummary(@RequestBody request: RentReviewSummaryEmailRequest) {
+
+        return tenantService.sendRentReviewSummary(request.email)
     }
 
     @GetMapping("/rentReview")
@@ -54,4 +57,8 @@ $it
 
         return ApiResponse("Updated ${completedTasks.size} paid tasks to complete${if (names.isNotBlank()) ": $names" else ""}")
     }
+
+    data class RentReviewSummaryEmailRequest(
+        val email: String
+    )
 }

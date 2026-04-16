@@ -15,48 +15,48 @@ private val logger = KotlinLogging.logger {}
 @Service
 class TenantService(val taskService: TaskService, val leasingService: LeasingService, val emailService: EmailService) {
 
-    fun sendRentReviewSummary(): List<Lease> {
+    fun getRentReviewSummary(): List<Lease> {
 
-        val currentYear = LocalDate.now().year
-
-        leasingService.getLeases()
+        return leasingService.getLeases()
             .filter { it.rentReviewDate.isBefore(LocalDate.now()) }
             .map {
-                it.rentReviews.findLast { r -> r.year == currentYear }?.let { rr ->
+                it.rentReviews.findLast { r -> r.year == LocalDate.now().year }?.let { rr ->
                     rr.awaitCPI = it.reviewType == "CPI" && rr.adoptedCPI <= BigDecimal.ZERO
                     it.rentReviews.clear()
                     it.rentReviews.add(rr)
                 }
 
                 return@map it
-            }.let {
-                val emailContent = buildString {
-                    appendLine("Tenant(s) that requires rent review.")
+            }
+    }
+
+    fun sendRentReviewSummary(email: String) {
+
+        getRentReviewSummary().let {
+            val emailContent = buildString {
+                appendLine("Tenant(s) that requires rent review.")
+                appendLine()
+                it.forEach { lease ->
+                    appendLine("${lease.tenant} - anniversary on ${lease.rentReviewDate.toDateFormat()} Review Type (${lease.reviewType})")
                     appendLine()
-                    it.forEach { lease ->
-                        appendLine("${lease.tenant} - anniversary on ${lease.rentReviewDate.toDateFormat()} Review Type (${lease.reviewType})")
-                        appendLine()
-                        append("New Rent: ")
+                    append("New Rent: ")
 
-                        lease.rentReviews.forEach { r ->
-                            val newRent = if (r.awaitCPI) {
-                                "Await CPI"
-                            } else {
-                                "${r.newRent.formatNumber()}+GST"
-                            }
-
-                            appendLine(newRent)
+                    lease.rentReviews.forEach { r ->
+                        val newRent = if (r.awaitCPI) {
+                            "Await CPI"
+                        } else {
+                            "${r.newRent.formatNumber()}+GST"
                         }
 
-                        appendLine()
+                        appendLine(newRent)
                     }
+
+                    appendLine()
                 }
-
-                println(emailContent)
-                //emailService.sendBrevoEmail("Rent Review Summary - $currentYear", emailContent)
-
-                return it
             }
+
+            emailService.sendBrevoEmail("Rent Review Summary - ${LocalDate.now().year}", emailContent, email)
+        }
     }
 
     fun sendTenantsInRentReview(): String {

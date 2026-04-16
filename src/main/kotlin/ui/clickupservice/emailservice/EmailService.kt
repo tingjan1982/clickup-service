@@ -17,8 +17,8 @@ class EmailService(
         return sendGridEmailSender.sendDynamicEmail(subject, contentStr, dynamicData)
     }
 
-    fun sendBrevoEmail(subject: String, contentStr: String): String {
-        return brevoEmailSender.sendBrevoEmail(subject, contentStr)
+    fun sendBrevoEmail(subject: String, contentStr: String, recipientEmail: String? = null): String {
+        return brevoEmailSender.sendBrevoEmail(subject, contentStr, recipientEmail)
     }
 
     fun sendBrevoTemplateEmail(
