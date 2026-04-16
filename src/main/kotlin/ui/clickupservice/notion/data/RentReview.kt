@@ -6,5 +6,6 @@ data class RentReview(
     val year: Int,
     val leases: String,
     val newRent: BigDecimal = BigDecimal.ZERO,
-    val adoptedCPI: BigDecimal = BigDecimal.ZERO
+    val adoptedCPI: BigDecimal = BigDecimal.ZERO,
+    var awaitCPI: Boolean = false
 )

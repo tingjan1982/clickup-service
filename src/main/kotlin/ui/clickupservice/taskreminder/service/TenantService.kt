@@ -23,6 +23,7 @@ class TenantService(val taskService: TaskService, val leasingService: LeasingSer
             .filter { it.rentReviewDate.isBefore(LocalDate.now()) }
             .map {
                 it.rentReviews.findLast { r -> r.year == currentYear }?.let { rr ->
+                    rr.awaitCPI = it.reviewType == "CPI" && rr.adoptedCPI <= BigDecimal.ZERO
                     it.rentReviews.clear()
                     it.rentReviews.add(rr)
                 }
@@ -38,16 +39,13 @@ class TenantService(val taskService: TaskService, val leasingService: LeasingSer
                         append("New Rent: ")
 
                         lease.rentReviews.forEach { r ->
-                            when (lease.reviewType) {
-                                "PERCENT" -> appendLine("${r.newRent.formatNumber()}+GST")
-                                "CPI" -> {
-                                    if (r.adoptedCPI <= BigDecimal.ZERO) {
-                                        appendLine("Await CPI")
-                                    } else {
-                                        appendLine("${r.newRent.formatNumber()}+GST")
-                                    }
-                                }
+                            val newRent = if (r.awaitCPI) {
+                                "Await CPI"
+                            } else {
+                                "${r.newRent.formatNumber()}+GST"
                             }
+
+                            appendLine(newRent)
                         }
 
                         appendLine()
@@ -55,7 +53,7 @@ class TenantService(val taskService: TaskService, val leasingService: LeasingSer
                 }
 
                 println(emailContent)
-                emailService.sendBrevoEmail("Rent Review Summary - $currentYear", emailContent)
+                //emailService.sendBrevoEmail("Rent Review Summary - $currentYear", emailContent)
 
                 return it
             }
