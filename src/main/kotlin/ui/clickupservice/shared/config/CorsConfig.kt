@@ -14,7 +14,7 @@ class CorsConfig {
         return object : WebMvcConfigurer {
             override fun addCorsMappings(registry: CorsRegistry) {
                 registry.addMapping("/**")
-                    .allowedOriginPatterns("https://dashboard.rabybayharbour.online:443", "http://localhost:5173", "http://boardroom:5173")
+                    .allowedOriginPatterns("https://dashboard.rabybayharbour.online", "http://localhost:5173", "http://boardroom:5173")
                     //.allowedOrigins("http://localhost:5173") // ← your frontend URL
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders("*")

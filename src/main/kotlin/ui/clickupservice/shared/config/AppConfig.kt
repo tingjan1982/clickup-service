@@ -48,7 +48,7 @@ class TaskServiceConfig {
     fun corsFilter(): CorsFilter {
         val config = CorsConfiguration()
         config.allowCredentials = true
-        config.setAllowedOriginPatterns(listOf("http://localhost:5173, http://boardroom:5173"))
+        config.setAllowedOriginPatterns(listOf("https://dashboard.rabybayharbour.online", "http://localhost:5173, http://boardroom:5173"))
         config.addAllowedHeader("*")
         config.addAllowedMethod("*")
 
