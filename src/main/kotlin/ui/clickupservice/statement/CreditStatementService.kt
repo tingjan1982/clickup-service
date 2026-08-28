@@ -135,7 +135,7 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
         val body = ValueRange().setValues(
             listOf(
                 listOf(
-                    account, dueDate.toDateFormat()
+                    asSheetText(account), dueDate.toDateFormat()
                 )
             )
         )
@@ -155,7 +155,7 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
         val body = ValueRange().setValues(
             listOf(
                 listOf(
-                    transaction.account,
+                    asSheetText(transaction.account),
                     transaction.dueDate.toDateFormat(),
                     transaction.date.toDateFormat(),
                     transaction.description,
@@ -183,6 +183,10 @@ class CreditStatementService(val googleApiUtils: GoogleApiUtils, val taskService
             dueDate = dueDate,
             account = account
         )
+    }
+
+    private fun asSheetText(value: String): String {
+        return "'$value"
     }
 
     fun populateExpenseTasks(): Pair<String, String> {

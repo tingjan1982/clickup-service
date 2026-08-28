@@ -16,7 +16,7 @@ import java.time.LocalDateTime
 class UISheetController(val uiCashSheetService: UICashSheetService, val bankExportService: BankExportService) {
 
     @PostMapping("/syncPayments")
-    fun sendPaymentReminder(): ApiResponse {
+    fun syncPlannedPayments(): ApiResponse {
 
         uiCashSheetService.syncPlannedPayments().let {
 
