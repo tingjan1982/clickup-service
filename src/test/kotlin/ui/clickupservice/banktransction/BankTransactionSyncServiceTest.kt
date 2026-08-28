@@ -7,6 +7,7 @@ import org.mockito.Mockito.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import ui.clickupservice.bankexport.data.DebitBankTransaction
 import ui.clickupservice.bankexport.service.BankExportService
 import ui.clickupservice.banktransction.service.BankTransactionSyncService
 import ui.clickupservice.shared.extension.toDate
@@ -61,8 +62,53 @@ class BankTransactionSyncServiceTest(@Autowired val service: BankTransactionSync
 
     }
 
+    @Test
+    fun syncBankTransactionsMatchesLoanPaymentOnNextBusinessDay() {
+
+        `when`(taskService.getLoanTasks()).thenReturn(
+            listOf(
+                loanTask("loan-1", "bab", LocalDate.of(2026, 1, 2), "100000", "123.45"),
+                loanTask("loan-2", "cf-bribie", LocalDate.of(2026, 1, 2), "200000", "456.78")
+            )
+        )
+        `when`(taskService.getPlannedPaymentTasks()).thenReturn(emptyList())
+
+        service.syncBankTransactions(
+            listOf(
+                debitTransaction("BAB", LocalDate.of(2026, 1, 5), "123.45")
+            )
+        )
+
+        verify(taskService, times(1)).updateTaskStatus(anyTask(), eqPaidStatus())
+    }
+
+    @Test
+    fun syncBankTransactionsMatchesCombinedLoanPaymentAtEndOfMonth() {
+
+        `when`(taskService.getLoanTasks()).thenReturn(
+            listOf(
+                loanTask("loan-1", "bab", LocalDate.of(2026, 1, 15), "100000", "123.45"),
+                loanTask("loan-2", "bab", LocalDate.of(2026, 1, 20), "200000", "456.78"),
+                loanTask("loan-3", "cf-bribie", LocalDate.of(2026, 1, 20), "300000", "100.00")
+            )
+        )
+        `when`(taskService.getPlannedPaymentTasks()).thenReturn(emptyList())
+
+        service.syncBankTransactions(
+            listOf(
+                debitTransaction("BAB", LocalDate.of(2026, 1, 30), "580.23")
+            )
+        )
+
+        verify(taskService, times(2)).updateTaskStatus(anyTask(), eqPaidStatus())
+    }
+
     private fun loanTask(id: String, tag: String, loan: String, payment: String): LoanTask {
-        return LoanTask(task(id, tag), BigDecimal(loan), BigDecimal(payment))
+        return loanTask(id, tag, LocalDate.of(2026, 1, 1), loan, payment)
+    }
+
+    private fun loanTask(id: String, tag: String, dueDate: LocalDate, loan: String, payment: String): LoanTask {
+        return LoanTask(task(id, tag, dueDate), BigDecimal(loan), BigDecimal(payment))
     }
 
     private fun paymentTask(id: String, tag: String, dueDate: LocalDate, payment: String): PaymentTask {
@@ -88,5 +134,15 @@ class BankTransactionSyncServiceTest(@Autowired val service: BankTransactionSync
     private fun eqPaidStatus(): String {
         eq("PAID")
         return "PAID"
+    }
+
+    private fun debitTransaction(entity: String, date: LocalDate, amount: String): DebitBankTransaction {
+        return DebitBankTransaction(
+            account = "",
+            entity = entity,
+            debitAmount = BigDecimal(amount),
+            creditAmount = BigDecimal.ZERO,
+            date = date
+        )
     }
 }
