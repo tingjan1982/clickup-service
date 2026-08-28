@@ -24,7 +24,8 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
         var taskCount = 0
 
         transactions.forEach { it ->
-            val keyToSearch = "${it.entity}-${it.date.toDateFormat()}-${it.debitAmount.formatNumber()}"
+            val transactionAmount = it.amount
+            val keyToSearch = "${it.entity}-${it.date.toDateFormat()}-${transactionAmount.formatNumber()}"
 
             paymentTasks[keyToSearch]?.let {
                 val task = it.getWrappedTask()
@@ -36,7 +37,7 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
                 taskCount++
             }
 
-            val loanKeyToSearch = "${it.entity}-${it.debitAmount.formatNumber()}"
+            val loanKeyToSearch = "${it.entity}-${transactionAmount.formatNumber()}"
 
             loanTasks[loanKeyToSearch]?.let {
                 val task = it.getWrappedTask()

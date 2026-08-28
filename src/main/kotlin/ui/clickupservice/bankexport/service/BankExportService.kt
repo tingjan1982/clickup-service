@@ -59,10 +59,17 @@ class BankExportService {
                 .map {
                     val accountNumber = it[0]
                     val debitAmount = it[3].ifBlank { "0" }
-                    DebitBankTransaction(accountNumber, ACCOUNT_MAP[accountNumber.substring(6)] ?: "", BigDecimal(debitAmount), Extensions.parseLocalDate(it[1]))
+                    val creditAmount = it.getOrNull(4)?.ifBlank { "0" } ?: "0"
+
+                    DebitBankTransaction(
+                        accountNumber,
+                        ACCOUNT_MAP[accountNumber.substring(6)] ?: "",
+                        BigDecimal(debitAmount),
+                        BigDecimal(creditAmount),
+                        Extensions.parseLocalDate(it[1]),
+                    )
                 }
                 .filter { it.entity.isNotBlank() }
-                .filter { it.debitAmount > BigDecimal.ZERO }
                 .toList()
         }
 
