@@ -70,6 +70,13 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
             .takeIf { it.size == 1 }
             ?.let { return it }
 
+        sameEntityLoanTasks
+            .groupBy { it.dueDate }
+            .filter { (dueDate, _) -> transaction.date == dueDate || transaction.date == nextBusinessDay(dueDate) }
+            .map { (_, dueDateLoanTasks) -> dueDateLoanTasks }
+            .firstOrNull { dueDateLoanTasks -> dueDateLoanTasks.sumOf { it.payment }.isEqualTo(transaction.amount) }
+            ?.let { return it }
+
         return sameEntityLoanTasks
             .groupBy { it.paymentCycle }
             .filter { (paymentCycle, _) -> isMonthEndPaymentDate(transaction.date, paymentCycle) }

@@ -103,6 +103,27 @@ class BankTransactionSyncServiceTest(@Autowired val service: BankTransactionSync
         verify(taskService, times(2)).updateTaskStatus(anyTask(), eqPaidStatus())
     }
 
+    @Test
+    fun syncBankTransactionsMatchesCombinedLoanPaymentOnDueDate() {
+
+        `when`(taskService.getLoanTasks()).thenReturn(
+            listOf(
+                loanTask("loan-1", "bab", LocalDate.of(2026, 1, 15), "100000", "123.45"),
+                loanTask("loan-2", "bab", LocalDate.of(2026, 1, 15), "200000", "456.78"),
+                loanTask("loan-3", "cf-bribie", LocalDate.of(2026, 1, 15), "300000", "100.00")
+            )
+        )
+        `when`(taskService.getPlannedPaymentTasks()).thenReturn(emptyList())
+
+        service.syncBankTransactions(
+            listOf(
+                debitTransaction("BAB", LocalDate.of(2026, 1, 15), "580.23")
+            )
+        )
+
+        verify(taskService, times(2)).updateTaskStatus(anyTask(), eqPaidStatus())
+    }
+
     private fun loanTask(id: String, tag: String, loan: String, payment: String): LoanTask {
         return loanTask(id, tag, LocalDate.of(2026, 1, 1), loan, payment)
     }
