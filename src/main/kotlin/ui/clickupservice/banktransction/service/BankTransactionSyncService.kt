@@ -77,12 +77,28 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
             .firstOrNull { dueDateLoanTasks -> dueDateLoanTasks.sumOf { it.payment }.isEqualTo(transaction.amount) }
             ?.let { return it }
 
+        sameEntityLoanTasks
+            .groupBy { it.loan }
+            .map { (_, sameLoanTasks) -> sameLoanTasks }
+            .firstOrNull { sameLoanTasks ->
+                sameLoanTasks.sumOf { it.payment }.isEqualTo(transaction.amount) &&
+                    isWithinSameLoanPaymentWindow(transaction.date, sameLoanTasks)
+            }
+            ?.let { return it }
+
         return sameEntityLoanTasks
             .groupBy { it.paymentCycle }
             .filter { (paymentCycle, _) -> isMonthEndPaymentDate(transaction.date, paymentCycle) }
             .map { (_, cycleLoanTasks) -> cycleLoanTasks }
             .firstOrNull { cycleLoanTasks -> cycleLoanTasks.sumOf { it.payment }.isEqualTo(transaction.amount) }
             ?: emptyList()
+    }
+
+    private fun isWithinSameLoanPaymentWindow(transactionDate: LocalDate, loanTasks: List<LoanCandidate>): Boolean {
+        val earliestDueDate = loanTasks.minOf { it.dueDate }
+        val latestDueMonthEnd = YearMonth.from(loanTasks.maxOf { it.dueDate }).atEndOfMonth()
+
+        return !transactionDate.isBefore(earliestDueDate) && !transactionDate.isAfter(latestDueMonthEnd)
     }
 
     private fun isMonthEndPaymentDate(transactionDate: LocalDate, paymentCycle: YearMonth): Boolean {
@@ -116,6 +132,7 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
         val task: LoanTask,
         val entity: String,
         val dueDate: LocalDate,
+        val loan: BigDecimal,
         val payment: BigDecimal,
         val paymentCycle: YearMonth
     ) {
@@ -126,6 +143,7 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
                     task,
                     TagConversionUtils.convertTag(task.task.toTagString()),
                     dueDate,
+                    task.loan,
                     task.payment,
                     YearMonth.from(dueDate)
                 )
