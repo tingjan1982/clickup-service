@@ -82,7 +82,17 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
             .map { (_, sameLoanTasks) -> sameLoanTasks }
             .firstOrNull { sameLoanTasks ->
                 sameLoanTasks.sumOf { it.payment }.isEqualTo(transaction.amount) &&
-                    isWithinSameLoanPaymentWindow(transaction.date, sameLoanTasks)
+                    isWithinPaymentWindow(transaction.date, sameLoanTasks)
+            }
+            ?.let { return it }
+
+        sameEntityLoanTasks
+            .filter { it.bank.isNotBlank() }
+            .groupBy { it.bank }
+            .map { (_, sameBankTasks) -> sameBankTasks }
+            .firstOrNull { sameBankTasks ->
+                sameBankTasks.sumOf { it.payment }.isEqualTo(transaction.amount) &&
+                    isWithinPaymentWindow(transaction.date, sameBankTasks)
             }
             ?.let { return it }
 
@@ -94,7 +104,7 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
             ?: emptyList()
     }
 
-    private fun isWithinSameLoanPaymentWindow(transactionDate: LocalDate, loanTasks: List<LoanCandidate>): Boolean {
+    private fun isWithinPaymentWindow(transactionDate: LocalDate, loanTasks: List<LoanCandidate>): Boolean {
         val earliestDueDate = loanTasks.minOf { it.dueDate }
         val latestDueMonthEnd = YearMonth.from(loanTasks.maxOf { it.dueDate }).atEndOfMonth()
 
@@ -134,6 +144,7 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
         val dueDate: LocalDate,
         val loan: BigDecimal,
         val payment: BigDecimal,
+        val bank: String,
         val paymentCycle: YearMonth
     ) {
         companion object {
@@ -145,6 +156,7 @@ class BankTransactionSyncService(val taskService: TaskService, val uiCashSheetSe
                     dueDate,
                     task.loan,
                     task.payment,
+                    task.bank,
                     YearMonth.from(dueDate)
                 )
             }

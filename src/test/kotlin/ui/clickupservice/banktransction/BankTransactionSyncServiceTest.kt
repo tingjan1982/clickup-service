@@ -1,6 +1,9 @@
 package ui.clickupservice.banktransction
 
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mockito.*
@@ -145,12 +148,43 @@ class BankTransactionSyncServiceTest(@Autowired val service: BankTransactionSync
         verify(taskService, times(2)).updateTaskStatus(anyTask(), eqPaidStatus())
     }
 
+    @Test
+    fun syncBankTransactionsMatchesSameBankPaymentAcrossMonths() {
+
+        `when`(taskService.getLoanTasks()).thenReturn(
+            listOf(
+                loanTask("loan-1", "bab", LocalDate.of(2026, 9, 30), "500000", "123.45", "CBA"),
+                loanTask("loan-2", "bab", LocalDate.of(2026, 10, 1), "600000", "456.78", "CBA"),
+                loanTask("loan-3", "bab", LocalDate.of(2026, 10, 1), "700000", "100.00", "CBA"),
+                loanTask("loan-4", "bab", LocalDate.of(2026, 10, 1), "800000", "999.00", "NAB")
+            )
+        )
+        `when`(taskService.getPlannedPaymentTasks()).thenReturn(emptyList())
+
+        service.syncBankTransactions(
+            listOf(
+                debitTransaction("BAB", LocalDate.of(2026, 10, 15), "680.23")
+            )
+        )
+
+        val taskCaptor = ArgumentCaptor.forClass(Tasks.Task::class.java)
+        verify(taskService, times(3)).updateTaskStatus(captureTask(taskCaptor), eqPaidStatus())
+
+        val updatedTaskIds = taskCaptor.allValues.map { it.id }
+        assertEquals(listOf("loan-1", "loan-2", "loan-3"), updatedTaskIds)
+        assertFalse(updatedTaskIds.contains("loan-4"))
+    }
+
     private fun loanTask(id: String, tag: String, loan: String, payment: String): LoanTask {
         return loanTask(id, tag, LocalDate.of(2026, 1, 1), loan, payment)
     }
 
     private fun loanTask(id: String, tag: String, dueDate: LocalDate, loan: String, payment: String): LoanTask {
-        return LoanTask(task(id, tag, dueDate), BigDecimal(loan), BigDecimal(payment))
+        return loanTask(id, tag, dueDate, loan, payment, null)
+    }
+
+    private fun loanTask(id: String, tag: String, dueDate: LocalDate, loan: String, payment: String, bank: String?): LoanTask {
+        return LoanTask(task(id, tag, dueDate), BigDecimal(loan), BigDecimal(payment), bank.orEmpty())
     }
 
     private fun paymentTask(id: String, tag: String, dueDate: LocalDate, payment: String): PaymentTask {
@@ -171,6 +205,11 @@ class BankTransactionSyncServiceTest(@Autowired val service: BankTransactionSync
     private fun anyTask(): Tasks.Task {
         any(Tasks.Task::class.java)
         return task("any-task", "bab")
+    }
+
+    private fun captureTask(taskCaptor: ArgumentCaptor<Tasks.Task>): Tasks.Task {
+        taskCaptor.capture()
+        return task("captured-task", "bab")
     }
 
     private fun eqPaidStatus(): String {
